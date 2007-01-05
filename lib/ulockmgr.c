@@ -21,6 +21,10 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 
+#if (__FreeBSD__ >= 10)
+#define MSG_NOSIGNAL 0
+#endif
+
 struct message {
     unsigned intr : 1;
     unsigned nofd : 1;
@@ -125,6 +129,13 @@ static int ulockmgr_start_daemon(void)
         return -1;
     }
     ulockmgr_cfd = sv[1];
+#if (__FreeBSD__ >= 10)
+    {
+        int on = 1;
+        res = setsockopt(ulockmgr_cfd, SOL_SOCKET, SO_NOSIGPIPE, (void *)&on,
+                         sizeof(on));
+    }
+#endif
     return 0;
 }
 

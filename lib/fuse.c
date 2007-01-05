@@ -734,6 +734,11 @@ static void mtime_set(const struct stat *stbuf, struct timespec *ts)
 
 static void curr_time(struct timespec *now)
 {
+#if (__FreeBSD__ >= 10)
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    TIMEVAL_TO_TIMESPEC(&tp, now); /* We are losing resolution here. */
+#else
     static clockid_t clockid = CLOCK_MONOTONIC;
     int res = clock_gettime(clockid, now);
     if (res == -1 && errno == EINVAL) {
@@ -744,6 +749,7 @@ static void curr_time(struct timespec *now)
         perror("fuse: clock_gettime");
         abort();
     }
+#endif
 }
 
 static void update_stat(struct node *node, const struct stat *stbuf)

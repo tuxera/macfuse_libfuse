@@ -109,10 +109,22 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("noneglect_shares",    KEY_KERN),
     FUSE_OPT_KEY("nopush_symlinks_in",  KEY_KERN),
     /* Linux specific mount options, but let just the mount util handle them */
+
+    /* Mac OS X specific options */
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
     FUSE_OPT_KEY("nonempty",            KEY_KERN),
     FUSE_OPT_KEY("large_read",          KEY_KERN),
     FUSE_OPT_KEY("max_read=",           KEY_KERN),
+    FUSE_OPT_KEY("volname=",            KEY_KERN),
+    FUSE_OPT_KEY("noauthopaque",        KEY_KERN),
+    FUSE_OPT_KEY("noauthopaqueaccess",  KEY_KERN),
+    FUSE_OPT_KEY("nosyncwrites",        KEY_KERN),
+    FUSE_OPT_KEY("fsid=",               KEY_KERN),
+    FUSE_OPT_KEY("subtype=",            KEY_KERN),
+    FUSE_OPT_KEY("noattrcache",         KEY_KERN),
+    FUSE_OPT_KEY("noreadahead",         KEY_KERN),
+    FUSE_OPT_KEY("noubc",               KEY_KERN),
+    FUSE_OPT_KEY("nobrowse",            KEY_KERN),
     FUSE_OPT_END
 };
 
@@ -199,7 +211,11 @@ void fuse_unmount_compat22(const char *mountpoint)
     if (rv)
         return;
 
+#if (__FreeBSD__ >= 10)
+    asprintf(&umount_cmd, "/sbin/umount %s", mountpoint);
+#else
     asprintf(&umount_cmd, "/sbin/umount %s", dev);
+#endif
     system(umount_cmd);
 }
 
@@ -222,7 +238,11 @@ void fuse_kern_unmount(const char *mountpoint, int fd)
     if (*ep != '\0')
         return;
 
+#if (__FreeBSD__ >= 10)
+    asprintf(&umount_cmd, "/sbin/umount %s", mountpoint);
+#else
     asprintf(&umount_cmd, "/sbin/umount " _PATH_DEV "%s", dev);
+#endif
     system(umount_cmd);
 }
 
@@ -267,12 +287,29 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
 
     dev = getenv("FUSE_DEV_NAME");
 
-    if (! dev)
-	dev = FUSE_DEV_TRUNK;
+    if (dev) {
+        if ((fd = open(dev, O_RDWR)) < 0) {
+            perror("fuse: failed to open fuse device");
+            return -1;
+        }
+    } else {
+#define NFUSEDEVICE 8
+        int r, devidx = -1;
+        char devpath[MAXPATHLEN];
 
-    if ((fd = open(dev, O_RDWR)) < 0) {
-        perror("fuse: failed to open fuse device");
-        return -1;
+        for (r = 0; r < NFUSEDEVICE; r++) {
+            snprintf(devpath, MAXPATHLEN - 1, "/dev/fuse%d", r);
+            fd = open(devpath, O_RDWR);
+            if (fd >= 0) {
+                dev = devpath;
+                devidx = r;
+                break;
+            }
+        }
+        if (devidx == -1) {
+            perror("fuse: failed to open fuse device");
+            return -1;
+        }
     }
 
 mount:
@@ -322,11 +359,31 @@ mount:
             perror("fuse: failed to exec mount program");
             exit(1);
         }
+#if (__FreeBSD__ >= 10)
+        else {
+            int status;
+            waitpid(pid, &status, 0);
+            if (WIFEXITED(status) && (WEXITSTATUS(status) != 0)) {
+                exit(WEXITSTATUS(status));
+            }
+        }
+#endif
 
         exit(0);
     }
 
+#if (__FreeBSD__ >= 10)
+    {
+        int status;
+
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status) && (WEXITSTATUS(status) != 0)) {
+            exit(WEXITSTATUS(status));
+        }
+    }
+#else
     waitpid(pid, NULL, 0);
+#endif
 
 out:
     return fd;

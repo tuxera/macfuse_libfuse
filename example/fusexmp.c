@@ -314,7 +314,11 @@ static int xmp_fsync(const char *path, int isdatasync,
 static int xmp_setxattr(const char *path, const char *name, const char *value,
                         size_t size, int flags)
 {
+#if (__FreeBSD__ >= 10)
+    int res = setxattr(path, name, value, size, 0, flags);
+#else
     int res = lsetxattr(path, name, value, size, flags);
+#endif
     if (res == -1)
         return -errno;
     return 0;
@@ -323,7 +327,11 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 static int xmp_getxattr(const char *path, const char *name, char *value,
                     size_t size)
 {
+#if (__FreeBSD__ >= 10)
+    int res = getxattr(path, name, value, size, 0, 0);
+#else
     int res = lgetxattr(path, name, value, size);
+#endif
     if (res == -1)
         return -errno;
     return res;
@@ -331,7 +339,11 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
+#if (__FreeBSD__ >= 10)
+    int res = listxattr(path, list, size, 0);
+#else
     int res = llistxattr(path, list, size);
+#endif
     if (res == -1)
         return -errno;
     return res;
@@ -339,7 +351,11 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 
 static int xmp_removexattr(const char *path, const char *name)
 {
+#if (__FreeBSD__ >= 10)
+    int res = removexattr(path, name, 0);
+#else
     int res = lremovexattr(path, name);
+#endif
     if (res == -1)
         return -errno;
     return 0;

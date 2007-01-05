@@ -107,7 +107,11 @@ static void *fuse_do_work(void *data)
     }
 
     pthread_kill(mt->main.thread_id, SIGHUP);
+#if (__FreeBSD__ >= 10)
+    exit(0);
+#else
     pause();
+#endif
 
     return NULL;
 }

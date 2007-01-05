@@ -32,8 +32,9 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
     int res;
 
     res = lstat(path, stbuf);
-    if (res == -1)
+    if (res == -1) {
         return -errno;
+    }
 
     return 0;
 }
@@ -266,7 +267,11 @@ static int xmp_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
     int fd;
 
+#if (__FreeBSD__ >= 10)
+    fd = open(path, fi->flags | O_CREAT, mode);
+#else
     fd = open(path, fi->flags, mode);
+#endif
     if (fd == -1)
         return -errno;
 
@@ -373,7 +378,11 @@ static int xmp_fsync(const char *path, int isdatasync,
 static int xmp_setxattr(const char *path, const char *name, const char *value,
                         size_t size, int flags)
 {
+#if (__FreeBSD__ >= 10)
+    int res = setxattr(path, name, value, size, 0, flags);
+#else
     int res = lsetxattr(path, name, value, size, flags);
+#endif
     if (res == -1)
         return -errno;
     return 0;
@@ -382,7 +391,11 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 static int xmp_getxattr(const char *path, const char *name, char *value,
                     size_t size)
 {
+#if (__FreeBSD__ >= 10)
+    int res = getxattr(path, name, value, size, 0, 0);
+#else
     int res = lgetxattr(path, name, value, size);
+#endif
     if (res == -1)
         return -errno;
     return res;
@@ -390,7 +403,11 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
+#if (__FreeBSD__ >= 10)
+    int res = listxattr(path, list, size, 0);
+#else
     int res = llistxattr(path, list, size);
+#endif
     if (res == -1)
         return -errno;
     return res;
@@ -398,7 +415,11 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 
 static int xmp_removexattr(const char *path, const char *name)
 {
+#if (__FreeBSD__ >= 10)
+    int res = removexattr(path, name, 0);
+#else
     int res = lremovexattr(path, name);
+#endif
     if (res == -1)
         return -errno;
     return 0;
@@ -414,7 +435,20 @@ static int xmp_lock(const char *path, struct fuse_file_info *fi, int cmd,
                        sizeof(fi->lock_owner));
 }
 
+void *
+xmp_init(struct fuse_conn_info *conn)
+{
+    return NULL;
+}
+
+void
+xmp_destroy(void *userdata)
+{
+}
+
 static struct fuse_operations xmp_oper = {
+    .init       = xmp_init,
+    .destroy    = xmp_destroy,
     .getattr	= xmp_getattr,
     .fgetattr	= xmp_fgetattr,
     .access	= xmp_access,
