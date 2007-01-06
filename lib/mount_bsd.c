@@ -111,20 +111,22 @@ static const struct fuse_opt fuse_mount_opts[] = {
     /* Linux specific mount options, but let just the mount util handle them */
 
     /* Mac OS X specific options */
+    FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
-    FUSE_OPT_KEY("nonempty",            KEY_KERN),
     FUSE_OPT_KEY("large_read",          KEY_KERN),
     FUSE_OPT_KEY("max_read=",           KEY_KERN),
-    FUSE_OPT_KEY("volname=",            KEY_KERN),
+    FUSE_OPT_KEY("noattrcache",         KEY_KERN),
     FUSE_OPT_KEY("noauthopaque",        KEY_KERN),
     FUSE_OPT_KEY("noauthopaqueaccess",  KEY_KERN),
-    FUSE_OPT_KEY("nosyncwrites",        KEY_KERN),
-    FUSE_OPT_KEY("fsid=",               KEY_KERN),
-    FUSE_OPT_KEY("subtype=",            KEY_KERN),
-    FUSE_OPT_KEY("noattrcache",         KEY_KERN),
-    FUSE_OPT_KEY("noreadahead",         KEY_KERN),
-    FUSE_OPT_KEY("noubc",               KEY_KERN),
     FUSE_OPT_KEY("nobrowse",            KEY_KERN),
+    FUSE_OPT_KEY("nonempty",            KEY_KERN),
+    FUSE_OPT_KEY("noreadahead",         KEY_KERN),
+    FUSE_OPT_KEY("nosyncwrites",        KEY_KERN),
+    FUSE_OPT_KEY("noubc",               KEY_KERN),
+    FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
+    FUSE_OPT_KEY("subtype=",            KEY_KERN),
+    FUSE_OPT_KEY("volname=",            KEY_KERN),
+
     FUSE_OPT_END
 };
 
