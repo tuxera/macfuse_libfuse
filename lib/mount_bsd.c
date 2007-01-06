@@ -24,6 +24,64 @@
 #define FUSERMOUNT_PROG         "mount_fusefs"
 #define FUSE_DEV_TRUNK          "/dev/fuse"
 
+#if (__FreeBSD__ >= 10)
+
+#define PRIVATE_LOAD_COMMAND    "/System/Library/Extensions/fusefs.kext/Contents/Resources/load_fusefs"
+
+#include <sys/param.h>
+#include <sys/mount.h>
+#include <AssertMacros.h>
+
+static int
+checkloadable(void)
+{
+    int ret;
+    struct vfsconf vfc;
+    
+    ret = getvfsbyname("fusefs", &vfc);
+    
+    return ret;
+}   
+
+int
+loadkmod()
+{
+    int result = -1;
+    int pid, terminated_pid;
+    union wait status;
+
+    pid = fork();
+
+    if (pid == 0) {
+        result = execl(PRIVATE_LOAD_COMMAND, PRIVATE_LOAD_COMMAND, NULL);
+        
+        /* exec failed */
+        goto Return;
+    }
+
+    require_action(pid != -1, Return, result = errno);
+
+    while ((terminated_pid = wait4(pid, (int *)&status, 0, NULL)) < 0) {
+        /* retry if EINTR, else break out with error */
+        if ( errno != EINTR ) {
+            break;
+        }
+    }
+
+    if ((terminated_pid == pid) && (WIFEXITED(status))) {
+        result = WEXITSTATUS(status);
+    } else {
+        result = -1;
+    }
+
+Return:
+    check_noerr_string(result, strerror(errno));
+    
+    return result;
+}
+
+#endif
+
 enum {
     KEY_ALLOW_ROOT,
     KEY_RO,
@@ -108,8 +166,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("noprivate",           KEY_KERN),
     FUSE_OPT_KEY("noneglect_shares",    KEY_KERN),
     FUSE_OPT_KEY("nopush_symlinks_in",  KEY_KERN),
-    /* Linux specific mount options, but let just the mount util handle them */
-
+#if (__FreeBSD__ >= 10)
     /* Mac OS X specific options */
     FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
@@ -126,7 +183,13 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
     FUSE_OPT_KEY("subtype=",            KEY_KERN),
     FUSE_OPT_KEY("volname=",            KEY_KERN),
-
+#else
+    /* Linux specific mount options, but let just the mount util handle them */
+    FUSE_OPT_KEY("fsname=",             KEY_KERN),
+    FUSE_OPT_KEY("nonempty",            KEY_KERN),
+    FUSE_OPT_KEY("large_read",          KEY_KERN),
+    FUSE_OPT_KEY("max_read=",           KEY_KERN),
+#endif
     FUSE_OPT_END
 };
 
@@ -268,6 +331,15 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
     int fd;
     char *fdnam, *dev;
     int pid;
+
+#if (__FreeBSD__ >= 10)
+    if (checkloadable()) {
+        if (loadkmod()) {
+            fprintf(stderr, "fusefs file system is not available");
+            return -1;
+        }
+    }
+#endif
 
     fdnam = getenv("FUSE_DEV_FD");
 
