@@ -367,7 +367,7 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
             return -1;
         }
     } else {
-#define NFUSEDEVICE 8
+#define NFUSEDEVICE 16
         int r, devidx = -1;
         char devpath[MAXPATHLEN];
 
