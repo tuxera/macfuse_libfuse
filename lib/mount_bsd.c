@@ -26,7 +26,7 @@
 
 #if (__FreeBSD__ >= 10)
 
-#define PRIVATE_LOAD_COMMAND    "/System/Library/Extensions/fusefs.kext/Contents/Resources/load_fusefs"
+#define PRIVATE_LOAD_COMMAND    "/Library/Extensions/fusefs.kext/Contents/Resources/load_fusefs"
 
 #include <sys/param.h>
 #include <sys/mount.h>
