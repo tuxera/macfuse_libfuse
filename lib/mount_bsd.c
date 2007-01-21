@@ -21,7 +21,7 @@
 #include <string.h>
 #include <paths.h>
 
-#define FUSERMOUNT_PROG         "mount_fusefs"
+#define FUSERMOUNT_PROG         "/System/Library/Filesystems/fusefs.fs/mount_fusefs"
 #define FUSE_DEV_TRUNK          "/dev/fuse"
 
 #if (__FreeBSD__ >= 10)
