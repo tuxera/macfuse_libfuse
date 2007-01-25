@@ -170,6 +170,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     /* Mac OS X specific options */
     FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
+    FUSE_OPT_KEY("init_timeout=",       KEY_KERN),
     FUSE_OPT_KEY("large_read",          KEY_KERN),
     FUSE_OPT_KEY("max_read=",           KEY_KERN),
     FUSE_OPT_KEY("noattrcache",         KEY_KERN),
