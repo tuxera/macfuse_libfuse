@@ -13,12 +13,34 @@
 #include <signal.h>
 
 static struct fuse_session *fuse_instance;
+#if (__FreeBSD__ >= 10)
+extern char *fuse_session_get_mntonname(struct fuse_session *se);
+
+#include <unistd.h>
+#endif
 
 static void exit_handler(int sig)
 {
     (void) sig;
+#if (__FreeBSD__ >= 10)
+    if (fuse_instance && !fuse_session_exited(fuse_instance)) {
+        int fd;
+        pid_t pid;
+
+        fd = fuse_chan_fd(fuse_session_next_chan(fuse_instance, NULL));
+        pid = fork();
+        if (pid == 0) { /* child */
+             char *mntonname = fuse_session_get_mntonname(fuse_instance);
+             fcntl(fd, F_SETFD, 1); /* close-on-exec */
+             execl("/sbin/umount", "/sbin/umount", mntonname, NULL);
+        } else {
+            /* We do nothing in the parent. */
+        }
+    }
+#else
     if (fuse_instance)
         fuse_session_exit(fuse_instance);
+#endif
 }
 
 static int set_one_signal_handler(int sig, void (*handler)(int))

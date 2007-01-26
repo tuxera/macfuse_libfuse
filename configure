@@ -11776,7 +11776,8 @@ _ACEOF
 fi
 
 
-libfuse_libs=-pthread
+#libfuse_libs=-pthread
+libfuse_libs=
 LIBS=
 { echo "$as_me:$LINENO: checking for library containing clock_gettime" >&5
 echo $ECHO_N "checking for library containing clock_gettime... $ECHO_C" >&6; }

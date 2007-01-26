@@ -18,7 +18,13 @@
 #include <assert.h>
 #include <signal.h>
 #include <sys/stat.h>
+#if (__FreeBSD__ >= 10)
+#undef _POSIX_C_SOURCE
 #include <sys/socket.h>
+#define _POSIX_C_SOURCE 200112L
+#else
+#include <sys/socket.h>
+#endif
 #include <sys/wait.h>
 
 #if (__FreeBSD__ >= 10)

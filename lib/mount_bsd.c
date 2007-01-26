@@ -6,6 +6,11 @@
     See the file COPYING.LIB.
 */
 
+#if (__FreeBSD__ >= 10)
+#undef _POSIX_C_SOURCE
+#include <sys/types.h>
+#endif
+
 #include "fuse_i.h"
 #include "fuse_opt.h"
 
@@ -21,16 +26,16 @@
 #include <string.h>
 #include <paths.h>
 
-#define FUSERMOUNT_PROG         "/System/Library/Filesystems/fusefs.fs/mount_fusefs"
-#define FUSE_DEV_TRUNK          "/dev/fuse"
-
 #if (__FreeBSD__ >= 10)
-
-#define PRIVATE_LOAD_COMMAND    "/Library/Extensions/fusefs.kext/Contents/Resources/load_fusefs"
+#define FUSERMOUNT_PROG  "/System/Library/Filesystems/fusefs.fs/mount_fusefs"
+#define FUSE_DEV_TRUNK   "/dev/fuse"
+#define PRIVATE_LOAD_COMMAND "/Library/Extensions/fusefs.kext/Contents/Resources/load_fusefs"
 
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <AssertMacros.h>
+
+static const char *MacFUSE = "MacFUSE User Library 0.1.9 (01-25-07)";
 
 static int
 checkloadable(void)
@@ -80,6 +85,9 @@ Return:
     return result;
 }
 
+#else
+#define FUSERMOUNT_PROG         "mount_fusefs"
+#define FUSE_DEV_TRUNK          "/dev/fuse"
 #endif
 
 enum {
@@ -278,11 +286,20 @@ void fuse_unmount_compat22(const char *mountpoint)
         return;
 
 #if (__FreeBSD__ >= 10)
-    asprintf(&umount_cmd, "/sbin/umount %s", mountpoint);
+    {
+        int ret;
+        char *rp = NULL;
+        char resolved_path[PATH_MAX];
+
+        rp = realpath(mountpoint, resolved_path);
+        if (rp) {
+            ret = unmount(resolved_path, 0);
+        }
+    }
 #else
     asprintf(&umount_cmd, "/sbin/umount %s", dev);
-#endif
     system(umount_cmd);
+#endif
 }
 
 void fuse_kern_unmount(const char *mountpoint, int fd)
@@ -305,16 +322,28 @@ void fuse_kern_unmount(const char *mountpoint, int fd)
         return;
 
 #if (__FreeBSD__ >= 10)
-    asprintf(&umount_cmd, "/sbin/umount %s", mountpoint);
+    {
+        int ret;
+        char *rp = NULL;
+        char resolved_path[PATH_MAX];
+
+        rp = realpath(mountpoint, resolved_path);
+        if (rp) {
+            ret = unmount(resolved_path, 0);
+        }
+    }
 #else
     asprintf(&umount_cmd, "/sbin/umount " _PATH_DEV "%s", dev);
-#endif
     system(umount_cmd);
+#endif
 }
 
 /* Check if kernel is doing init in background */
 static int init_backgrounded(void)
 {
+#if (__FreeBSD__ >= 10)
+    return 0;
+#else
     int ibg, len;
 
     len = sizeof(ibg);
@@ -323,6 +352,7 @@ static int init_backgrounded(void)
         return 0;
 
     return ibg;
+#endif
 }
 
 

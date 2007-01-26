@@ -264,6 +264,10 @@ static struct fuse *fuse_setup_common(int argc, char *argv[],
     if (fd)
         *fd = fuse_chan_fd(ch);
 
+#if (__FreeBSD__ >= 10)
+    fuse_session_set_mntonname(fuse_get_session(fuse), *mountpoint);
+#endif
+
     return fuse;
 
  err_unmount:

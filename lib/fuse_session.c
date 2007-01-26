@@ -15,6 +15,9 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#if (__FreeBSD__ >= 10)
+#include <sys/param.h>
+#endif
 
 struct fuse_session {
     struct fuse_session_ops op;
@@ -24,6 +27,10 @@ struct fuse_session {
     volatile int exited;
 
     struct fuse_chan *ch;
+
+#if (__FreeBSD__ >= 10)
+    char mntonname[MAXPATHLEN];
+#endif
 };
 
 struct fuse_chan {
@@ -39,6 +46,30 @@ struct fuse_chan {
 
     int compat;
 };
+
+#if (__FreeBSD__ >= 10)
+char *fuse_session_get_mntonname(struct fuse_session *se)
+{
+    if (se) {
+        return se->mntonname;
+    }
+
+    return NULL;
+}
+
+void fuse_session_set_mntonname(struct fuse_session *se, char *mntonname)
+{
+    if (!se || !mntonname) {
+        return;
+    }
+
+    if (!realpath(mntonname, se->mntonname)) {
+        memset(se->mntonname, 0, MAXPATHLEN);
+    }
+
+    return;
+}
+#endif
 
 struct fuse_session *fuse_session_new(struct fuse_session_ops *op, void *data)
 {
