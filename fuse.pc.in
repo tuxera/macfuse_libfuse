@@ -7,4 +7,4 @@ Name: fuse
 Description: File System in User Space (MacFUSE)
 Version: @VERSION@
 Libs: -L${libdir} -lfuse
-Cflags: -I${includedir}/fuse -D_FILE_OFFSET_BITS=64
+Cflags: -I${includedir}/fuse -D__FreeBSD__=10 -D_FILE_OFFSET_BITS=64

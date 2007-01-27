@@ -35,7 +35,7 @@
 #include <sys/mount.h>
 #include <AssertMacros.h>
 
-static const char *MacFUSE = "MacFUSE User Library 0.1.9 (01-25-07)";
+static const char *MacFUSE = "MacFUSE User Library 0.1.9 (01-26-07)";
 
 static int
 checkloadable(void)
@@ -176,6 +176,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("nopush_symlinks_in",  KEY_KERN),
 #if (__FreeBSD__ >= 10)
     /* Mac OS X specific options */
+    FUSE_OPT_KEY("daemon_timeout=",     KEY_KERN),
     FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
     FUSE_OPT_KEY("init_timeout=",       KEY_KERN),
