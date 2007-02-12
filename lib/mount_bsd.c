@@ -35,7 +35,7 @@
 #include <sys/mount.h>
 #include <AssertMacros.h>
 
-static const char *MacFUSE = "MacFUSE User Library 0.1.9 (01-26-07)";
+static const char *MacFUSE = "MacFUSE User Library 0.1.10 (01-31-07)";
 
 static int
 checkloadable(void)
@@ -190,6 +190,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("noreadahead",         KEY_KERN),
     FUSE_OPT_KEY("nosyncwrites",        KEY_KERN),
     FUSE_OPT_KEY("noubc",               KEY_KERN),
+    FUSE_OPT_KEY("novncache",           KEY_KERN),
     FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
     FUSE_OPT_KEY("subtype=",            KEY_KERN),
     FUSE_OPT_KEY("volname=",            KEY_KERN),
