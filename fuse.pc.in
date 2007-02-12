@@ -6,5 +6,5 @@ includedir=@includedir@
 Name: fuse
 Description: File System in User Space (MacFUSE)
 Version: @VERSION@
-Libs: -L${libdir} -lfuse
+Libs: -L${libdir} -lfuse @libfuse_libs@
 Cflags: -I${includedir}/fuse -D__FreeBSD__=10 -D_FILE_OFFSET_BITS=64

@@ -35,7 +35,7 @@
 #include <sys/mount.h>
 #include <AssertMacros.h>
 
-static const char *MacFUSE = "MacFUSE User Library 0.1.9 (01-26-07)";
+static const char *MacFUSE = "MacFUSE version 0.2.0, " __DATE__ ", " __TIME__;
 
 static int
 checkloadable(void)
@@ -175,9 +175,10 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("noneglect_shares",    KEY_KERN),
     FUSE_OPT_KEY("nopush_symlinks_in",  KEY_KERN),
 #if (__FreeBSD__ >= 10)
-    /* Mac OS X specific options */
+    /* Mac OS X options */
     FUSE_OPT_KEY("blocksize=",          KEY_KERN),
     FUSE_OPT_KEY("daemon_timeout=",     KEY_KERN),
+    FUSE_OPT_KEY("extended_security",   KEY_KERN),
     FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
     FUSE_OPT_KEY("init_timeout=",       KEY_KERN),
@@ -187,9 +188,11 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("noauthopaque",        KEY_KERN),
     FUSE_OPT_KEY("noauthopaqueaccess",  KEY_KERN),
     FUSE_OPT_KEY("nobrowse",            KEY_KERN),
+    FUSE_OPT_KEY("nolocalcaches",       KEY_KERN),
     FUSE_OPT_KEY("noreadahead",         KEY_KERN),
     FUSE_OPT_KEY("nosyncwrites",        KEY_KERN),
     FUSE_OPT_KEY("noubc",               KEY_KERN),
+    FUSE_OPT_KEY("novncache",           KEY_KERN),
     FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
     FUSE_OPT_KEY("subtype=",            KEY_KERN),
     FUSE_OPT_KEY("volname=",            KEY_KERN),

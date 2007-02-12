@@ -141,7 +141,7 @@ static void unlock_mtab(int mtablock)
    filenames. */
 static int check_name(const char *name)
 {
-    char *s;
+    const char *s;
     for (s = "\n\t\\"; *s; s++) {
         if (strchr(name, *s)) {
             fprintf(stderr, "%s: illegal character 0x%02x in mount entry\n",
@@ -583,7 +583,7 @@ static int has_fuseblk(void)
         return 1;
 
     while (fgets(buf, sizeof(buf), f))
-        if (strcmp(buf, "fuseblk\n") == 0) {
+        if (strstr(buf, "fuseblk\n")) {
             fclose(f);
             return 1;
         }
@@ -1036,7 +1036,7 @@ static int send_fd(int sock_fd, int fd)
     struct msghdr msg;
     struct cmsghdr *p_cmsg;
     struct iovec vec;
-    char cmsgbuf[CMSG_SPACE(sizeof(fd))];
+    size_t cmsgbuf[CMSG_SPACE(sizeof(fd)) / sizeof(size_t)];
     int *p_fds;
     char sendchar = 0;
 

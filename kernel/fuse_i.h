@@ -42,7 +42,7 @@
 #  define KERNEL_2_6_19_PLUS
 #endif
 
-#ifdef __arm__
+#if defined(__arm__) && LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
 #define DCACHE_BUG
 #endif
 
@@ -55,7 +55,7 @@
 #include <linux/spinlock.h>
 #include <linux/mm.h>
 #include <linux/backing-dev.h>
-#ifdef KERNEL_2_6_17_PLUS
+#ifdef HAVE_MUTEX_H
 #include <linux/mutex.h>
 #else
 #include <asm/semaphore.h>
@@ -66,9 +66,15 @@
 #define mutex_unlock(m) up(m)
 #define mutex semaphore
 #endif
+#ifndef HAVE_I_MUTEX
+#define i_mutex i_sem	/* Hack for struct inode */
+#endif
 #ifndef KERNEL_2_6_19_PLUS
 #define clear_nlink(inode) (inode)->i_nlink = 0
 #define inc_nlink(inode) (inode)->i_nlink++
+#endif
+#ifndef HAVE_CONFIG_BLOCK
+#define CONFIG_BLOCK
 #endif
 
 /** Max number of pages that can be used in a single read request */

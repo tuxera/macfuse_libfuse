@@ -1,3 +1,80 @@
+2007-02-04  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Released 2.6.3
+
+2007-02-04  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Compile fuseblk for kernels which don't have an option to turn
+	off the block layer (CONFIG_BLOCK).  Reported by Szakacsits
+	Szabolcs
+
+2007-02-02  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix regression caused by "Fix possible double lock in certain
+	cases if request is interrupted" on 2007-01-19.  Reported by José
+	Antonio Sánchez
+
+	* kernel: make it compile on "strange" kernels which have emulated
+	mutexes via <linux/mutex.h> but no i_mutex.  Reported by Tomasz
+	Mateja
+
+2007-01-30  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Released 2.6.2
+
+2007-01-28  Miklos Szeredi <miklos@szeredi.hu>
+
+	* kernel: fix BUG in control filesystem if it is umounted and
+	mounted again, while some fuse filesystems are present.
+	Bugreport from Florent Mertens
+
+	* kernel: sync with mainline, support 2.6.20
+
+2007-01-22  Miklos Szeredi <miklos@szeredi.hu>
+
+	* lib/Makefile.am: actually link libfuse against libfuse_libs
+
+2007-01-19  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Build fix for 2.6.16 vanila and 2.6.15 FC5 kernels.  Patch from
+	Ian Abbott
+
+	* Fix possible double lock in certain cases if request is
+	interrupted
+
+2007-01-18  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix abort in fuse_new() compatibility API for opts == NULL case.
+	Novell bugzilla #233870.  Patch from Takashi Iwai.
+
+2007-01-02  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix unaligned access in file desctriptor passing in libfuse,
+	fusermount and ulockmgr.  Debian bug ID: 404904.  Reported and
+	tested by Sebastian Fontius
+
+2006-12-15  Miklos Szeredi <miklos@szeredi.hu>
+
+	* fusermount: Fix detection of fuseblk.  Reported by Szakacsits
+	Szabolcs
+
+	* lib: Fix use after free in fuse_flush().  Reported by Ron
+	Lindman
+
+2006-12-04  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix warnings with gcc-4.1 on 64bit archs.  Report from
+	Harshavardhana
+
+	* Add extra warning options, and fix resulting warnings
+
+	* Really fix fuse_teardown problem
+
+2006-12-02  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Add -lrt to fuse.pc (if needed) to fix static linking against
+	libfuse.  Reported by Szakacsits Szabolcs
+
 2006-12-01  Miklos Szeredi <miklos@szeredi.hu>
 
 	* Released 2.6.1

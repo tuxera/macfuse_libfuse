@@ -58,8 +58,25 @@ static int xmp_access(const char *path, int mask)
     int res;
 
     res = access(path, mask);
-    if (res == -1)
+    if (res == -1) {
+#if (__FreeBSD__ >= 10)
+        if (errno == ENOENT) {
+            int next_res;
+            struct stat sb;
+            next_res = lstat(path, &sb);
+            if (next_res == 0 && S_ISLNK(sb.st_mode) &&
+                ((sb.st_uid == getuid()) || (geteuid() == 0))) {
+                /*
+                 * The target of the symlink doesn't exist, but the
+                 * symlink itself does. A lame cheap fix here.
+                 */
+                return 0;
+            }
+            return -ENOENT;
+        }
+#endif
         return -errno;
+    }  /* if (res == -1) */
 
     return 0;
 }

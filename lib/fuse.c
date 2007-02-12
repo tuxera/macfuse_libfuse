@@ -1448,16 +1448,16 @@ static void fuse_create(fuse_req_t req, fuse_ino_t parent, const char *name,
         if (f->conf.kernel_cache)
             fi->keep_cache = 1;
 
+        /* see comment for open */
         pthread_mutex_lock(&f->lock);
         if (fuse_reply_create(req, &e, fi) == -ENOENT) {
             /* The open syscall was interrupted, so it must be cancelled */
+            pthread_mutex_unlock(&f->lock);
             if(f->op.release)
                 fuse_do_release(f, req, path, fi);
-            pthread_mutex_unlock(&f->lock);
             forget_node(f, e.ino, 1);
         } else {
-            struct node *node = get_node(f, e.ino);
-            node->open_count ++;
+            get_node(f, e.ino)->open_count++;
             pthread_mutex_unlock(&f->lock);
         }
     } else
@@ -1478,7 +1478,10 @@ static double diff_timespec(const struct timespec *t1,
 static void open_auto_cache(struct fuse *f, fuse_req_t req, fuse_ino_t ino,
                             const char *path, struct fuse_file_info *fi)
 {
-    struct node *node = get_node(f, ino);
+    struct node *node;
+
+    pthread_mutex_lock(&f->lock);
+    node = get_node(f, ino);
     if (node->cache_valid) {
         struct timespec now;
 
@@ -1487,10 +1490,12 @@ static void open_auto_cache(struct fuse *f, fuse_req_t req, fuse_ino_t ino,
             struct stat stbuf;
             int err;
 
+            pthread_mutex_unlock(&f->lock);
             if (f->op.fgetattr)
                 err = fuse_do_fgetattr(f, req, path, &stbuf, fi);
             else
                 err = fuse_do_getattr(f, req, path, &stbuf);
+            pthread_mutex_lock(&f->lock);
 
             if (!err)
                 update_stat(node, &stbuf);
@@ -1502,6 +1507,7 @@ static void open_auto_cache(struct fuse *f, fuse_req_t req, fuse_ino_t ino,
         fi->keep_cache = 1;
 
     node->cache_valid = 1;
+    pthread_mutex_unlock(&f->lock);
 }
 
 static void fuse_open(fuse_req_t req, fuse_ino_t ino,
@@ -1530,19 +1536,22 @@ static void fuse_open(fuse_req_t req, fuse_ino_t ino,
         if (f->conf.kernel_cache)
             fi->keep_cache = 1;
 
-        pthread_mutex_lock(&f->lock);
         if (f->conf.auto_cache)
             open_auto_cache(f, req, ino, path, fi);
 
+        /* The reply and the open count increase needs to be under a
+           single locked section, otherwise a release could come in
+           between and screw up the accounting */
+        pthread_mutex_lock(&f->lock);
         if (fuse_reply_open(req, fi) == -ENOENT) {
             /* The open syscall was interrupted, so it must be cancelled */
+            pthread_mutex_unlock(&f->lock);
             if(f->op.release && path != NULL)
                 fuse_compat_release(f, req, path, fi);
         } else {
-            struct node *node = get_node(f, ino);
-            node->open_count ++;
+            get_node(f, ino)->open_count++;
+            pthread_mutex_unlock(&f->lock);
         }
-        pthread_mutex_unlock(&f->lock);
     } else
         reply_err(req, err);
 
@@ -1761,7 +1770,6 @@ static void fuse_opendir(fuse_req_t req, fuse_ino_t ino,
             dh->fh = fi.fh;
         }
         if (!err) {
-            pthread_mutex_lock(&f->lock);
             if (fuse_reply_open(req, llfi) == -ENOENT) {
                 /* The opendir syscall was interrupted, so it must be
                    cancelled */
@@ -1770,7 +1778,6 @@ static void fuse_opendir(fuse_req_t req, fuse_ino_t ino,
                 pthread_mutex_destroy(&dh->lock);
                 free(dh);
             }
-            pthread_mutex_unlock(&f->lock);
         } else {
             reply_err(req, err);
             free(dh);
@@ -2306,7 +2313,6 @@ static void fuse_flush(fuse_req_t req, fuse_ino_t ino,
         err = -ENOSYS;
         if (f->op.flush)
             err = fuse_do_flush(f, req, path, fi);
-        free(path);
     }
     if (f->op.lock) {
         struct flock lock;
@@ -2325,6 +2331,7 @@ static void fuse_flush(fuse_req_t req, fuse_ino_t ino,
         if (err == -ENOSYS)
             err = 0;
     }
+    free(path);
     pthread_rwlock_unlock(&f->tree_lock);
     reply_err(req, err);
 }
@@ -2959,9 +2966,10 @@ static struct fuse *fuse_new_common_compat(int fd, const char *opts,
     struct fuse *f;
     struct fuse_args args = FUSE_ARGS_INIT(0, NULL);
 
+    if (fuse_opt_add_arg(&args, "") == -1)
+	return NULL;
     if (opts &&
-        (fuse_opt_add_arg(&args, "") == -1 ||
-         fuse_opt_add_arg(&args, "-o") == -1 ||
+        (fuse_opt_add_arg(&args, "-o") == -1 ||
          fuse_opt_add_arg(&args, opts) == -1)) {
         fuse_opt_free_args(&args);
         return NULL;
