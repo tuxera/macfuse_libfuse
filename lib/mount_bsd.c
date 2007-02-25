@@ -35,7 +35,7 @@
 #include <sys/mount.h>
 #include <AssertMacros.h>
 
-static const char *MacFUSE = "MacFUSE version 0.2.1, " __DATE__ ", " __TIME__;
+static const char *MacFUSE = "MacFUSE version 0.2.2, " __DATE__ ", " __TIME__;
 
 static int
 checkloadable(void)
@@ -184,12 +184,14 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("init_timeout=",       KEY_KERN),
     FUSE_OPT_KEY("iosize=",             KEY_KERN),
     FUSE_OPT_KEY("jail_symlinks",       KEY_KERN),
+    FUSE_OPT_KEY("noapplespecial",      KEY_KERN),
     FUSE_OPT_KEY("noattrcache",         KEY_KERN),
     FUSE_OPT_KEY("noauthopaque",        KEY_KERN),
     FUSE_OPT_KEY("noauthopaqueaccess",  KEY_KERN),
     FUSE_OPT_KEY("nobrowse",            KEY_KERN),
     FUSE_OPT_KEY("nolocalcaches",       KEY_KERN),
     FUSE_OPT_KEY("noreadahead",         KEY_KERN),
+    FUSE_OPT_KEY("nosynconclose",       KEY_KERN),
     FUSE_OPT_KEY("nosyncwrites",        KEY_KERN),
     FUSE_OPT_KEY("noubc",               KEY_KERN),
     FUSE_OPT_KEY("novncache",           KEY_KERN),
