@@ -284,11 +284,7 @@ static int xmp_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
     int fd;
 
-#if (__FreeBSD__ >= 10)
-    fd = open(path, fi->flags | O_CREAT, mode);
-#else
     fd = open(path, fi->flags, mode);
-#endif
     if (fd == -1)
         return -errno;
 
