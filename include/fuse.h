@@ -662,8 +662,4 @@ struct fuse_session *fuse_get_session(struct fuse *f);
 }
 #endif
 
-#if (__FreeBSD__ >= 10)
-#define __asm__(x)
-#endif
-
 #endif /* _FUSE_H_ */

@@ -3005,12 +3005,14 @@ struct fuse *fuse_new_compat1(int fd, int flags,
                                   sizeof(struct fuse_operations_compat1), 11);
 }
 
+#if !(__FreeBSD__ >= 10)
 __asm__(".symver fuse_exited,__fuse_exited@");
 __asm__(".symver fuse_process_cmd,__fuse_process_cmd@");
 __asm__(".symver fuse_read_cmd,__fuse_read_cmd@");
 __asm__(".symver fuse_set_getcontext_func,__fuse_set_getcontext_func@");
 __asm__(".symver fuse_new_compat2,fuse_new@");
 __asm__(".symver fuse_new_compat22,fuse_new@FUSE_2.2");
+#endif
 
 #else /* __FreeBSD__ */
 
@@ -3047,4 +3049,6 @@ struct fuse *fuse_new_compat25(int fd, struct fuse_args *args,
                                     op_size, 25);
 }
 
+#if !(__FreeBSD__ >= 10)
 __asm__(".symver fuse_new_compat25,fuse_new@FUSE_2.5");
+#endif

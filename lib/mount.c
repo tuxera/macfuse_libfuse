@@ -304,5 +304,7 @@ int fuse_kern_mount(const char *mountpoint, struct fuse_args *args)
     return res;
 }
 
+#if !(__FreeBSD__ >= 10)
 __asm__(".symver fuse_mount_compat22,fuse_mount@FUSE_2.2");
 __asm__(".symver fuse_unmount_compat22,fuse_unmount@FUSE_2.2");
+#endif
