@@ -60,12 +60,8 @@ am__libfuse_la_SOURCES_DIST = fuse.c fuse_i.h fuse_kern_chan.c \
 	fuse_loop.c fuse_loop_mt.c fuse_lowlevel.c fuse_misc.h \
 	fuse_mt.c fuse_opt.c fuse_session.c fuse_signals.c helper.c \
 	mount.c mount_bsd.c
-ifeq (@host_vendor@, apple)
-am__objects_1 = mount_bsd.lo
-else
 @BSD_FALSE@am__objects_1 = mount.lo
 @BSD_TRUE@am__objects_1 = mount_bsd.lo
-endif
 am_libfuse_la_OBJECTS = fuse.lo fuse_kern_chan.lo fuse_loop.lo \
 	fuse_loop_mt.lo fuse_lowlevel.lo fuse_mt.lo fuse_opt.lo \
 	fuse_session.lo fuse_signals.lo helper.lo $(am__objects_1)
@@ -206,12 +202,8 @@ AM_CPPFLAGS = -I$(top_srcdir)/include -DFUSERMOUNT_DIR=\"$(bindir)\" \
  -D_FILE_OFFSET_BITS=64 -D_REENTRANT -DFUSE_USE_VERSION=26
 
 lib_LTLIBRARIES = libfuse.la libulockmgr.la
-ifeq (@host_vendor@, apple)
-mount_source = mount_bsd.c
-else
 @BSD_FALSE@mount_source = mount.c
 @BSD_TRUE@mount_source = mount_bsd.c
-endif
 libfuse_la_SOURCES = \
 	fuse.c			\
 	fuse_i.h		\
@@ -227,12 +219,8 @@ libfuse_la_SOURCES = \
 	helper.c		\
 	$(mount_source)
 
-ifeq ($(host_vendor), apple)
-libfuse_la_LDFLAGS = @libfuse_libs@
-else
 libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:6:5 \
 	-Wl,--version-script,$(srcdir)/fuse_versionscript
-endif
 
 libulockmgr_la_SOURCES = ulockmgr.c
 libulockmgr_la_LDFLAGS = -version-number 1:0:1

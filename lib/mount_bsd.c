@@ -372,9 +372,14 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
     int pid;
 
 #if (__FreeBSD__ >= 10)
+    if (!mountpoint) {
+        fprintf(stderr, "missing or invalid mount point\n");
+        return -1;
+    }
+
     if (checkloadable()) {
         if (loadkmod()) {
-            fprintf(stderr, "fusefs file system is not available");
+            fprintf(stderr, "fusefs file system is not available\n");
             return -1;
         }
     }
