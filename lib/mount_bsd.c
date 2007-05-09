@@ -35,7 +35,7 @@
 #include <sys/mount.h>
 #include <AssertMacros.h>
 
-static const char *MacFUSE = "MacFUSE version 0.3.0, " __DATE__ ", " __TIME__;
+static const char *MacFUSE = "MacFUSE version 0.4.0, " __DATE__ ", " __TIME__;
 
 static int
 checkloadable(void)
@@ -178,6 +178,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     /* Mac OS X options */
     FUSE_OPT_KEY("blocksize=",          KEY_KERN),
     FUSE_OPT_KEY("daemon_timeout=",     KEY_KERN),
+    FUSE_OPT_KEY("defer_auth",          KEY_KERN),
     FUSE_OPT_KEY("extended_security",   KEY_KERN),
     FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
