@@ -57,6 +57,11 @@ struct fuse_config {
     int auto_cache;
     int intr;
     int intr_signal;
+#if (__FreeBSD__ >= 10)
+    char *volicon;
+    char *volicon_data;
+    off_t volicon_size;
+#endif
 };
 
 struct fuse {
@@ -135,6 +140,249 @@ static void fuse_compat_release(struct fuse *, fuse_req_t, char *,
 static int fuse_compat_opendir(struct fuse *, fuse_req_t, char *,
                                struct fuse_file_info *);
 static int fuse_compat_statfs(struct fuse *, fuse_req_t, struct statvfs *);
+
+#if (__FreeBSD__ >= 10)
+
+/* volicon stuff */
+
+#define VOLICON_PATH    "/.VolumeIcon.icns"
+#define VOLICON_MAXSIZE (1024 * 1024)
+
+static __inline__ int
+volicon_is_the_file(struct fuse *f, const char *path)
+{
+    return (f->conf.volicon && (!strcmp(path, VOLICON_PATH)));
+}
+
+static __inline__ int
+volicon_backend_do_getattr(struct fuse *f, const char *path, struct stat *buf)
+{
+    int res = 0;
+
+    if (volicon_is_the_file(f, path)) {
+        memset((void *)buf, 0, sizeof(struct stat));
+        buf->st_mode = S_IFREG | 0444;
+        buf->st_nlink = 1;
+        buf->st_uid = buf->st_gid = 0;
+        buf->st_size = f->conf.volicon_size;
+        buf->st_atime = buf->st_ctime = buf->st_mtime = time(NULL);
+    } else {
+        res = f->op.getattr(path, buf);
+    }
+
+    return res;
+}
+
+static __inline__ int
+volicon_backend_do_fgetattr(struct fuse *f, const char *path, struct stat *buf,
+                            struct fuse_file_info *fi)
+{
+    int res = 0;
+
+    if (volicon_is_the_file(f, path)) {
+        memset((void *)buf, 0, sizeof(struct stat));
+        buf->st_mode = S_IFREG | 0444;
+        buf->st_nlink = 1;
+        buf->st_uid = buf->st_gid = 0;
+        buf->st_size = f->conf.volicon_size;
+        buf->st_atime = buf->st_ctime = buf->st_mtime = time(NULL);
+    } else {
+        res = f->op.fgetattr(path, buf, fi);
+    }
+
+    return res;
+}
+
+static __inline__ int
+volicon_backend_do_open(struct fuse *f, const char *path,
+                        struct fuse_file_info *fi)
+{
+    if (volicon_is_the_file(f, path)) {
+        if (fi && ((fi->flags & O_ACCMODE) != O_RDONLY)) {
+            return -EPERM;
+        }
+        return 0;
+    }
+
+    return f->op.open(path, fi);
+}
+
+static __inline__ int
+volicon_backend_read(struct fuse *f, const char *path, char *buf,
+                     size_t size, off_t off, struct fuse_file_info *fi)
+{
+    int res = 0;
+
+    if (volicon_is_the_file(f, path)) {
+        size_t a_size = size;
+        if (off < f->conf.volicon_size) {
+            if ((off + size) > f->conf.volicon_size) {
+                a_size = f->conf.volicon_size - off;
+            }
+            memcpy(buf, (char *)(f->conf.volicon_data) + off, a_size);
+            res = a_size;
+        }
+    } else {
+        res = f->op.read(path, buf, size, off, fi);
+    }
+
+    return res;
+}
+
+/*
+ * We shouldn't need volicon backends for ftruncate() or write() because
+ * we don't allow a writable file descriptor to be obtained in the first
+ * place.
+ */
+
+#include <libgen.h>
+
+#ifdef _POSIX_C_SOURCE
+typedef unsigned char  u_char;
+typedef unsigned short u_short;
+typedef unsigned long  u_long;
+typedef unsigned int   u_int;
+#endif
+#include <sys/attr.h>
+
+#include <sys/vnode.h>
+
+static int FinderInfoGet(const char *path, uint32_t *type, uint32_t *creator);
+typedef struct attrlist attrlist_t;
+
+struct FinderInfoAttrBuf {
+    unsigned long length;
+    fsobj_type_t  objType;
+    char          finderInfo[32];
+};
+typedef struct FinderInfoAttrBuf FinderInfoAttrBuf;
+
+static int
+FinderInfoGet(const char *path, uint32_t *type, uint32_t *creator)
+{
+    int               ret;
+    attrlist_t        attrList;
+    FinderInfoAttrBuf attrBuf;
+
+    if (!type || !creator) {
+        return EINVAL;
+    }
+
+    *type = 0;
+    *creator = 0;
+
+    memset(&attrList, 0, sizeof(attrList));
+    attrList.bitmapcount = ATTR_BIT_MAP_COUNT;
+    attrList.commonattr  = ATTR_CMN_OBJTYPE | ATTR_CMN_FNDRINFO;
+
+    ret = getattrlist(path, &attrList, &attrBuf, sizeof(attrBuf), 0);
+    if (ret != 0) {
+        return errno;
+    }
+
+    if ((ret == 0) && (attrBuf.objType != VREG) ) {
+        return EINVAL;
+    } else {
+        memcpy(type, &attrBuf.finderInfo[0], sizeof(uint32_t));
+        memcpy(creator, &attrBuf.finderInfo[4], sizeof(uint32_t));
+    }
+
+    *type = ntohl(*type);
+    *creator = ntohl(*creator);
+
+    return 0;
+}
+
+static int
+volicon_init(struct fuse *f)
+{
+    int ret;
+    int voliconfd;
+    struct stat sb;
+
+    if (!f->conf.volicon) {
+        return 0;
+    }
+
+    voliconfd = open(f->conf.volicon, O_RDONLY);
+    if (voliconfd < 0) {
+        fprintf(stderr, "failed to access volume icon file (%d)\n", errno);
+        return -1;
+    }
+
+    ret = fstat(voliconfd, &sb);
+    if (ret) {
+        fprintf(stderr, "failed to stat volume icon file (%d)\n", errno);
+        close(voliconfd);
+        return -1;
+    }
+
+    if (sb.st_size > (VOLICON_MAXSIZE)) {
+        fprintf(stderr, "size limit exceeded for volume icon file\n");
+        close(voliconfd);
+        return -1;
+    }
+
+    f->conf.volicon_data = malloc(sb.st_size);
+    if (!f->conf.volicon_data) {
+        fprintf(stderr, "failed to allocate memory for volume icon data\n");
+        close(voliconfd);
+        return -1;
+    }
+
+    ret = read(voliconfd, f->conf.volicon_data, sb.st_size);
+    if (ret != sb.st_size) {
+        fprintf(stderr, "failed to read data from volume icon file\n");
+        close(voliconfd);
+        free(f->conf.volicon_data);
+        return -1;
+    }
+
+    close(voliconfd);
+
+    f->conf.volicon_size = sb.st_size;
+
+    return 0;
+}
+
+void
+volicon_fini(struct fuse *f, const char *mntpath)
+{
+    int ret;
+    size_t len;
+    char *p1, *p2;
+    char dot_path[MAXPATHLEN + 1];
+    uint32_t type, creator;
+
+    if (!f->conf.volicon) {
+        return;
+    }
+
+    len = strlen(mntpath) + 2;
+    p1 = dirname(mntpath);
+    p2 = basename(mntpath);
+    if (!p1 || !p2 || (len > MAXPATHLEN)) {
+        return;
+    }
+
+    ret = snprintf(dot_path, MAXPATHLEN + 1, "%s/._%s", p1, p2);
+    if (ret != len) {
+        return;
+    }
+
+    ret = FinderInfoGet(dot_path, &type, &creator);
+    if (ret) {
+        return;
+    }
+
+    if ((creator == 'FUSE') && (type == 'ROOT')) {
+        (void)unlink(dot_path);
+    }
+
+    return;
+}
+
+#endif
 
 static struct node *get_node_nocheck(struct fuse *f, fuse_ino_t nodeid)
 {
@@ -516,7 +764,11 @@ static int fuse_do_getattr(struct fuse *f, fuse_req_t req, const char *path,
     int res;
     struct fuse_intr_data d;
     fuse_prepare_interrupt(f, req, &d);
+#if (__FreeBSD__ >= 10)
+    res = volicon_backend_do_getattr(f, path, buf);
+#else
     res = f->op.getattr(path, buf);
+#endif
     fuse_finish_interrupt(f, req, &d);
     return res;
 }
@@ -527,7 +779,11 @@ static int fuse_do_fgetattr(struct fuse *f, fuse_req_t req, const char *path,
     int res;
     struct fuse_intr_data d;
     fuse_prepare_interrupt(f, req, &d);
+#if (__FreeBSD__ >= 10)
+    res = volicon_backend_do_fgetattr(f, path, buf, fi);
+#else
     res = f->op.fgetattr(path, buf, fi);
+#endif
     fuse_finish_interrupt(f, req, &d);
     return res;
 }
@@ -558,6 +814,9 @@ static void fuse_do_release(struct fuse *f, fuse_req_t req, const char *path,
 {
     struct fuse_intr_data d;
     fuse_prepare_interrupt(f, req, &d);
+#if (__FreeBSD__ >= 10)
+    if (!volicon_is_the_file(f, path))
+#endif
     f->op.release(path, fi);
     fuse_finish_interrupt(f, req, &d);
 }
@@ -579,7 +838,11 @@ static int fuse_do_open(struct fuse *f, fuse_req_t req, char *path,
     int res;
     struct fuse_intr_data d;
     fuse_prepare_interrupt(f, req, &d);
+#if (__FreeBSD__ >= 10)
+    res = volicon_backend_do_open(f, path, fi);
+#else
     res = f->op.open(path, fi);
+#endif
     fuse_finish_interrupt(f, req, &d);
     return res;
 }
@@ -590,6 +853,11 @@ static int fuse_do_flush(struct fuse *f, fuse_req_t req, const char *path,
     int res;
     struct fuse_intr_data d;
     fuse_prepare_interrupt(f, req, &d);
+#if (__FreeBSD__ >= 10)
+    if (volicon_is_the_file(f, path))
+        res = 0;
+    else
+#endif
     res = f->op.flush(path, fi);
     fuse_finish_interrupt(f, req, &d);
     return res;
@@ -1132,6 +1400,11 @@ static void fuse_access(fuse_req_t req, fuse_ino_t ino, int mask)
         if (f->op.access) {
             struct fuse_intr_data d;
             fuse_prepare_interrupt(f, req, &d);
+#if (__FreeBSD__ >= 10)
+            if (volicon_is_the_file(f, path))
+                err = 0;
+            else
+#endif
             err = f->op.access(path, mask);
             fuse_finish_interrupt(f, req, &d);
         }
@@ -1258,6 +1531,11 @@ static void fuse_unlink(fuse_req_t req, fuse_ino_t parent, const char *name)
         }
         err = -ENOSYS;
         if (f->op.unlink) {
+#if (__FreeBSD__ >= 10)
+            if (volicon_is_the_file(f, path))
+                err = -EPERM;
+            else
+#endif
             if (!f->conf.hard_remove && is_open(f, parent, name))
                 err = hide_node(f, req, path, parent, name);
             else {
@@ -1589,7 +1867,11 @@ static void fuse_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
         if (f->op.read) {
             struct fuse_intr_data d;
             fuse_prepare_interrupt(f, req, &d);
+#if (__FreeBSD__ >= 10)
+            res = volicon_backend_read(f, path, buf, size, off, fi);
+#else
             res = f->op.read(path, buf, size, off, fi);
+#endif
             fuse_finish_interrupt(f, req, &d);
         }
         free(path);
@@ -1714,6 +1996,11 @@ static void fuse_fsync(fuse_req_t req, fuse_ino_t ino, int datasync,
         if (f->op.fsync) {
             struct fuse_intr_data d;
             fuse_prepare_interrupt(f, req, &d);
+#if (__FreeBSD__ >= 10)
+            if (volicon_is_the_file(f, path))
+                err = 0;
+            else
+#endif
             err = f->op.fsync(path, datasync, fi);
             fuse_finish_interrupt(f, req, &d);
         }
@@ -2584,6 +2871,9 @@ static const struct fuse_opt fuse_lib_opts[] = {
     FUSE_LIB_OPT("negative_timeout=%lf",  negative_timeout, 0),
     FUSE_LIB_OPT("intr",                  intr, 1),
     FUSE_LIB_OPT("intr_signal=%d",        intr_signal, 0),
+#if (__FreeBSD__ >= 10)
+    FUSE_LIB_OPT("volicon=%s",            volicon, 0),
+#endif
     FUSE_OPT_END
 };
 
@@ -2605,6 +2895,9 @@ static void fuse_lib_help(void)
 "    -o ac_attr_timeout=T   auto cache timeout for attributes (attr_timeout)\n"
 "    -o intr                allow requests to be interrupted\n"
 "    -o intr_signal=NUM     signal to send on interrupt (%i)\n"
+#if (__FreeBSD__ >= 10)
+"    -o volicon=PATH        path to icon file for the volume\n"
+#endif
 "\n", FUSE_DEFAULT_INTR_SIGNAL);
 }
 
@@ -2687,9 +2980,20 @@ struct fuse *fuse_new_common(struct fuse_chan *ch, struct fuse_args *args,
     f->conf.attr_timeout = 1.0;
     f->conf.negative_timeout = 0.0;
     f->conf.intr_signal = FUSE_DEFAULT_INTR_SIGNAL;
+#if (__FreeBSD__ >= 10)
+    f->conf.volicon = NULL;
+    f->conf.volicon_data = NULL;
+    f->conf.volicon_size = 0;
+#endif
 
     if (fuse_opt_parse(args, &f->conf, fuse_lib_opts, fuse_lib_opt_proc) == -1)
             goto out_free;
+
+#if (__FreeBSD__ >= 10)
+    if (volicon_init(f) != 0) {
+        goto out_free;
+    }
+#endif
 
     if (!f->conf.ac_attr_timeout_set)
         f->conf.ac_attr_timeout = f->conf.attr_timeout;

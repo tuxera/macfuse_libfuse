@@ -27,9 +27,9 @@
 #include <paths.h>
 
 #if (__FreeBSD__ >= 10)
-#define FUSERMOUNT_PROG  "/System/Library/Filesystems/fusefs.fs/mount_fusefs"
+#define FUSERMOUNT_PROG  "/System/Library/Filesystems/fusefs.fs/Support/mount_fusefs"
 #define FUSE_DEV_TRUNK   "/dev/fuse"
-#define PRIVATE_LOAD_COMMAND "/Library/Extensions/fusefs.kext/Contents/Resources/load_fusefs"
+#define PRIVATE_LOAD_COMMAND "/System/Library/Filesystems/fusefs.fs/Support/load_fusefs"
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -102,6 +102,10 @@ enum {
     KEY_HELP,
     KEY_VERSION,
     KEY_KERN
+#if (__FreeBSD__ >= 10)
+    ,
+    KEY_ICON,
+#endif
 };
 
 struct mount_opts {
@@ -209,6 +213,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("novncache",           KEY_KERN),
     FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
     FUSE_OPT_KEY("subtype=",            KEY_KERN),
+    FUSE_OPT_KEY("volicon=",            KEY_ICON),
     FUSE_OPT_KEY("volname=",            KEY_KERN),
 #else
     /* Linux specific mount options, but let just the mount util handle them */
@@ -252,6 +257,15 @@ static int fuse_mount_opt_proc(void *data, const char *arg, int key,
 
     case KEY_KERN:
         return fuse_opt_add_opt(&mo->kernel_opts, arg);
+
+#if (__FreeBSD__ >= 10)
+    case KEY_ICON:
+          if (fuse_opt_add_opt(&mo->kernel_opts, "volicon") == -1 ||
+              (fuse_opt_add_arg(outargs, "-o") == -1) ||
+              (fuse_opt_add_arg(outargs, arg) == -1))
+            return -1;
+        return 0;
+#endif
 
     case KEY_HELP:
         mount_help();

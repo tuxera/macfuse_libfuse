@@ -290,6 +290,12 @@ struct fuse *fuse_setup(int argc, char *argv[],
 static void fuse_teardown_common(struct fuse *fuse, char *mountpoint)
 {
     struct fuse_session *se = fuse_get_session(fuse);
+#if (__FreeBSD__ >= 10)
+    const char *mntonname = (const char *)fuse_session_get_mntonname(se);
+    if (mntonname) {
+        volicon_fini(fuse, mntonname);
+    }
+#endif 
     struct fuse_chan *ch = fuse_session_next_chan(se, NULL);
     fuse_remove_signal_handlers(se);
     fuse_unmount_common(mountpoint, ch);
