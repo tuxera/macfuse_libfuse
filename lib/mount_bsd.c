@@ -37,8 +37,8 @@
 
 static const char *MacFUSE = "MacFUSE version 0.4.0, " __DATE__ ", " __TIME__;
 
-static int
-checkloadable(void)
+__unused static int
+checkloadable_unused(void)
 {
     int ret;
     struct vfsconf vfc;
@@ -47,6 +47,12 @@ checkloadable(void)
     
     return ret;
 }   
+
+static int
+checkloadable(void)
+{
+    return 1; /* load_fusefs will take care of checking */
+}
 
 int
 loadkmod()
@@ -176,6 +182,8 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("nopush_symlinks_in",  KEY_KERN),
 #if (__FreeBSD__ >= 10)
     /* Mac OS X options */
+    FUSE_OPT_KEY("allow_recursion",     KEY_KERN),
+    FUSE_OPT_KEY("allow_root",          KEY_KERN), /* need to pass this on */
     FUSE_OPT_KEY("blocksize=",          KEY_KERN),
     FUSE_OPT_KEY("daemon_timeout=",     KEY_KERN),
     FUSE_OPT_KEY("defer_auth",          KEY_KERN),
@@ -186,6 +194,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("iosize=",             KEY_KERN),
     FUSE_OPT_KEY("jail_symlinks",       KEY_KERN),
     FUSE_OPT_KEY("kill_on_unmount",     KEY_KERN),
+    FUSE_OPT_KEY("noalerts",            KEY_KERN),
     FUSE_OPT_KEY("noapplespecial",      KEY_KERN),
     FUSE_OPT_KEY("noattrcache",         KEY_KERN),
     FUSE_OPT_KEY("noauthopaque",        KEY_KERN),
