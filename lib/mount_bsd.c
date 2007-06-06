@@ -9,6 +9,7 @@
 #if (__FreeBSD__ >= 10)
 #undef _POSIX_C_SOURCE
 #include <sys/types.h>
+#include <CoreFoundation/CoreFoundation.h>
 #endif
 
 #include "fuse_i.h"
@@ -74,7 +75,7 @@ loadkmod()
 
     while ((terminated_pid = wait4(pid, (int *)&status, 0, NULL)) < 0) {
         /* retry if EINTR, else break out with error */
-        if ( errno != EINTR ) {
+        if (errno != EINTR) {
             break;
         }
     }
@@ -402,8 +403,23 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
     }
 
     if (checkloadable()) {
-        if (loadkmod()) {
-            fprintf(stderr, "fusefs file system is not available\n");
+        int result = loadkmod();
+        if (result) {
+            if (result == EBUSY) {
+                CFOptionFlags responseFlags;
+                CFUserNotificationDisplayNotice(
+                    (CFTimeInterval)0,
+                    kCFUserNotificationCautionAlertLevel,
+                    (CFURLRef)0,
+                    (CFURLRef)0,
+                    (CFURLRef)0,
+                    CFSTR("MacFUSE Version Mismatch"),
+                    CFSTR("MacFUSE has been updated but an incompatible or old version of the MacFUSE kernel extension is already loaded. It failed to unload, possibly because a MacFUSE volume is currently mounted.\n\nPlease eject all MacFUSE volumes and try again, or simply restart the system for changes to take effect."),
+                    CFSTR("OK")
+                );
+            }
+            fprintf(stderr, "fusefs file system is not available (%d)\n",
+                    result);
             return -1;
         }
     }
