@@ -36,7 +36,7 @@
 #include <sys/mount.h>
 #include <AssertMacros.h>
 
-static const char *MacFUSE = "MacFUSE version 0.4.0, " __DATE__ ", " __TIME__;
+static const char *MacFUSE = "MacFUSE version 0.5.0, " __DATE__ ", " __TIME__;
 
 __unused static int
 checkloadable_unused(void)
