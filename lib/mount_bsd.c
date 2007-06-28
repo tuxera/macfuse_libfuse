@@ -192,6 +192,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("blocksize=",          KEY_KERN),
     FUSE_OPT_KEY("daemon_timeout=",     KEY_KERN),
     FUSE_OPT_KEY("defer_auth",          KEY_KERN),
+    FUSE_OPT_KEY("direct_io",           KEY_KERN),
     FUSE_OPT_KEY("extended_security",   KEY_KERN),
     FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
