@@ -106,6 +106,7 @@ enum {
 #if (__FreeBSD__ >= 10)
     ,
     KEY_ICON,
+    KEY_DIO,
 #endif
 };
 
@@ -192,7 +193,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("blocksize=",          KEY_KERN),
     FUSE_OPT_KEY("daemon_timeout=",     KEY_KERN),
     FUSE_OPT_KEY("defer_auth",          KEY_KERN),
-    FUSE_OPT_KEY("direct_io",           KEY_KERN),
+    FUSE_OPT_KEY("direct_io",           KEY_DIO),
     FUSE_OPT_KEY("extended_security",   KEY_KERN),
     FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
@@ -265,6 +266,12 @@ static int fuse_mount_opt_proc(void *data, const char *arg, int key,
           if (fuse_opt_add_opt(&mo->kernel_opts, "volicon") == -1 ||
               (fuse_opt_add_arg(outargs, "-o") == -1) ||
               (fuse_opt_add_arg(outargs, arg) == -1))
+            return -1;
+        return 0;
+
+    case KEY_DIO:
+          if (fuse_opt_add_opt(&mo->kernel_opts, "direct_io") == -1 ||
+              (fuse_opt_add_arg(outargs, "-odirect_io") == -1))
             return -1;
         return 0;
 #endif
