@@ -1,6 +1,6 @@
 /*
     FUSE: Filesystem in Userspace
-    Copyright (C) 2001-2006  Miklos Szeredi <miklos@szeredi.hu>
+    Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
     This program can be distributed under the terms of the GNU LGPL.
     See the file COPYING.LIB.
@@ -556,8 +556,6 @@ struct fuse_lowlevel_ops {
      * For every opendir call there will be exactly one releasedir
      * call.
      *
-     * Any errors sent by releasedir will be ignored.
-     *
      * fi->fh will contain the value set by the opendir method, or
      * will be undefined if the opendir method didn't set any value.
      *
@@ -913,6 +911,19 @@ int fuse_reply_write(fuse_req_t req, size_t count);
  * @return zero for success, -errno for failure to send reply
  */
 int fuse_reply_buf(fuse_req_t req, const char *buf, size_t size);
+
+/**
+ * Reply with data vector
+ *
+ * Possible requests:
+ *   read, readdir, getxattr, listxattr
+ *
+ * @param req request handle
+ * @param iov the vector containing the data
+ * @param count the size of vector
+ * @return zero for success, -errno for failure to send reply
+ */
+int fuse_reply_iov(fuse_req_t req, const struct iovec *iov, int count);
 
 /**
  * Reply with filesystem statistics

@@ -59,16 +59,19 @@ libfuse_la_LIBADD =
 am__libfuse_la_SOURCES_DIST = fuse.c fuse_i.h fuse_kern_chan.c \
 	fuse_loop.c fuse_loop_mt.c fuse_lowlevel.c fuse_misc.h \
 	fuse_mt.c fuse_opt.c fuse_session.c fuse_signals.c helper.c \
-	mount.c mount_bsd.c
+	modules/subdir.c modules/iconv.c mount.c mount_util.c \
+	mount_util.h mount_bsd.c
+@ICONV_TRUE@am__objects_1 = iconv.lo
 ifeq (@host_vendor@, apple)
 am__objects_1 = mount_bsd.lo
 else
-@BSD_FALSE@am__objects_1 = mount.lo
-@BSD_TRUE@am__objects_1 = mount_bsd.lo
+@BSD_FALSE@am__objects_2 = mount.lo mount_util.lo
+@BSD_TRUE@am__objects_2 = mount_bsd.lo
 endif
 am_libfuse_la_OBJECTS = fuse.lo fuse_kern_chan.lo fuse_loop.lo \
 	fuse_loop_mt.lo fuse_lowlevel.lo fuse_mt.lo fuse_opt.lo \
-	fuse_session.lo fuse_signals.lo helper.lo $(am__objects_1)
+	fuse_session.lo fuse_signals.lo helper.lo subdir.lo \
+	$(am__objects_1) $(am__objects_2)
 libfuse_la_OBJECTS = $(am_libfuse_la_OBJECTS)
 libulockmgr_la_LIBADD =
 am_libulockmgr_la_OBJECTS = ulockmgr.lo
@@ -117,6 +120,8 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
+ICONV_FALSE = @ICONV_FALSE@
+ICONV_TRUE = @ICONV_TRUE@
 INIT_D_PATH = @INIT_D_PATH@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -124,12 +129,14 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBICONV = @LIBICONV@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LINUX_FALSE = @LINUX_FALSE@
 LINUX_TRUE = @LINUX_TRUE@
 LN_S = @LN_S@
+LTLIBICONV = @LTLIBICONV@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MOUNT_FUSE_PATH = @MOUNT_FUSE_PATH@
@@ -209,9 +216,11 @@ lib_LTLIBRARIES = libfuse.la libulockmgr.la
 ifeq (@host_vendor@, apple)
 mount_source = mount_bsd.c
 else
-@BSD_FALSE@mount_source = mount.c
+@BSD_FALSE@mount_source = mount.c mount_util.c mount_util.h
 @BSD_TRUE@mount_source = mount_bsd.c
 endif
+@ICONV_FALSE@iconv_source = 
+@ICONV_TRUE@iconv_source = modules/iconv.c
 libfuse_la_SOURCES = \
 	fuse.c			\
 	fuse_i.h		\
@@ -225,12 +234,14 @@ libfuse_la_SOURCES = \
 	fuse_session.c		\
 	fuse_signals.c		\
 	helper.c		\
+	modules/subdir.c	\
+	$(iconv_source)		\
 	$(mount_source)
 
 ifeq ($(host_vendor), apple)
 libfuse_la_LDFLAGS = @libfuse_libs@
 else
-libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:6:5 \
+libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:0 \
 	-Wl,--version-script,$(srcdir)/fuse_versionscript
 endif
 
@@ -318,8 +329,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fuse_session.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fuse_signals.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/helper.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iconv.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount_bsd.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount_util.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/subdir.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ulockmgr.Plo@am__quote@
 
 .c.o:
@@ -342,6 +356,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
+
+subdir.lo: modules/subdir.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT subdir.lo -MD -MP -MF "$(DEPDIR)/subdir.Tpo" -c -o subdir.lo `test -f 'modules/subdir.c' || echo '$(srcdir)/'`modules/subdir.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/subdir.Tpo" "$(DEPDIR)/subdir.Plo"; else rm -f "$(DEPDIR)/subdir.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='modules/subdir.c' object='subdir.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o subdir.lo `test -f 'modules/subdir.c' || echo '$(srcdir)/'`modules/subdir.c
+
+iconv.lo: modules/iconv.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT iconv.lo -MD -MP -MF "$(DEPDIR)/iconv.Tpo" -c -o iconv.lo `test -f 'modules/iconv.c' || echo '$(srcdir)/'`modules/iconv.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/iconv.Tpo" "$(DEPDIR)/iconv.Plo"; else rm -f "$(DEPDIR)/iconv.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='modules/iconv.c' object='iconv.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o iconv.lo `test -f 'modules/iconv.c' || echo '$(srcdir)/'`modules/iconv.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

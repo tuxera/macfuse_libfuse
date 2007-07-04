@@ -28,6 +28,9 @@
 #include <paths.h>
 
 #if (__FreeBSD__ >= 10)
+
+#include <libproc.h>
+
 #define FUSERMOUNT_PROG  "/System/Library/Filesystems/fusefs.fs/Support/mount_fusefs"
 #define FUSE_DEV_TRUNK   "/dev/fuse"
 #define PRIVATE_LOAD_COMMAND "/System/Library/Filesystems/fusefs.fs/Support/load_fusefs"
@@ -105,7 +108,6 @@ enum {
     KEY_KERN
 #if (__FreeBSD__ >= 10)
     ,
-    KEY_ICON,
     KEY_DIO,
 #endif
 };
@@ -216,7 +218,6 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("novncache",           KEY_KERN),
     FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
     FUSE_OPT_KEY("subtype=",            KEY_KERN),
-    FUSE_OPT_KEY("volicon=",            KEY_ICON),
     FUSE_OPT_KEY("volname=",            KEY_KERN),
 #else
     /* Linux specific mount options, but let just the mount util handle them */
@@ -262,13 +263,6 @@ static int fuse_mount_opt_proc(void *data, const char *arg, int key,
         return fuse_opt_add_opt(&mo->kernel_opts, arg);
 
 #if (__FreeBSD__ >= 10)
-    case KEY_ICON:
-          if (fuse_opt_add_opt(&mo->kernel_opts, "volicon") == -1 ||
-              (fuse_opt_add_arg(outargs, "-o") == -1) ||
-              (fuse_opt_add_arg(outargs, arg) == -1))
-            return -1;
-        return 0;
-
     case KEY_DIO:
           if (fuse_opt_add_opt(&mo->kernel_opts, "direct_io") == -1 ||
               (fuse_opt_add_arg(outargs, "-odirect_io") == -1))
@@ -382,18 +376,19 @@ void fuse_kern_unmount(const char *mountpoint, int fd)
 /* Check if kernel is doing init in background */
 static int init_backgrounded(void)
 {
-#if (__FreeBSD__ >= 10)
-    return 0;
-#else
     int ibg, len;
 
     len = sizeof(ibg);
 
+#if (__FreeBSD__ >= 10)
+    if (sysctlbyname("macfuse.tunables.init_backgrounded", &ibg, (size_t *)&len, NULL, 0))
+        return 0;
+#else
     if (sysctlbyname("vfs.fuse.init_backgrounded", &ibg, &len, NULL, 0))
         return 0;
+#endif
 
     return ibg;
-#endif
 }
 
 
@@ -403,8 +398,10 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
     int fd;
     char *fdnam, *dev;
     int pid;
-
 #if (__FreeBSD__ >= 10)
+    char *subtype;
+    int ibg = 0;
+
     if (!mountpoint) {
         fprintf(stderr, "missing or invalid mount point\n");
         return -1;
@@ -482,7 +479,11 @@ mount:
     if (getenv("FUSE_NO_MOUNT") || ! mountpoint)
         goto out;
 
+#if (__FreeBSD__ >= 10)
+    pid = vfork();
+#else
     pid = fork();
+#endif
 
     if (pid == -1) {
         perror("fuse: fork() failed");
@@ -490,8 +491,16 @@ mount:
         return -1;
     }
 
+#if (__FreeBSD__ >= 10)
+    ibg = init_backgrounded();
+#endif
+
     if (pid == 0) {
+#if (__FreeBSD__ >= 10)
+        if (!ibg) {
+#else
         if (! init_backgrounded()) {
+#endif
             /*
              * If init is not backgrounded, we have to call the mount util
              * backgrounded, to avoid deadlock.
@@ -521,16 +530,30 @@ mount:
             argv[a++] = fdnam;
             argv[a++] = mountpoint;
             argv[a++] = NULL;
+
+#if (__FreeBSD__ >= 10)
+            {
+                char title[MAXPATHLEN + 1] = { 0 };
+                u_int32_t len = MAXPATHLEN;
+                int ret = proc_pidpath(getpid(), title, len);
+                if (ret) {
+                    setenv("MOUNT_FUSEFS_DAEMON_PATH", title, 1);
+                }
+            }
+#endif
+
             execvp(mountprog, (char **) argv);
             perror("fuse: failed to exec mount program");
             exit(1);
         }
 #if (__FreeBSD__ >= 10)
         else {
-            int status;
-            waitpid(pid, &status, 0);
-            if (WIFEXITED(status) && (WEXITSTATUS(status) != 0)) {
-                exit(WEXITSTATUS(status));
+            if (ibg) {
+                int status;
+                waitpid(pid, &status, 0);
+                if (WIFEXITED(status) && (WEXITSTATUS(status) != 0)) {
+                    exit(WEXITSTATUS(status));
+                }
             }
         }
 #endif

@@ -1,6 +1,6 @@
 /*
   FUSE: Filesystem in Userspace
-  Copyright (C) 2001-2006  Miklos Szeredi <miklos@szeredi.hu>
+  Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
   This program can be distributed under the terms of the GNU GPL.
   See the file COPYING.
@@ -11,6 +11,7 @@
 #include <linux/pagemap.h>
 #include <linux/slab.h>
 #include <linux/kernel.h>
+#include <linux/sched.h>
 
 #ifndef KERNEL_2_6_11_PLUS
 static inline loff_t page_offset(struct page *page)
@@ -75,7 +76,11 @@ void fuse_finish_open(struct inode *inode, struct file *file,
 	if (outarg->open_flags & FOPEN_DIRECT_IO)
 		file->f_op = &fuse_direct_io_file_operations;
 	if (!(outarg->open_flags & FOPEN_KEEP_CACHE))
+#ifdef KERNEL_2_6_21_PLUS
+		invalidate_mapping_pages(inode->i_mapping, 0, -1);
+#else
 		invalidate_inode_pages(inode->i_mapping);
+#endif
 	ff->fh = outarg->fh;
 	file->private_data = ff;
 }
@@ -627,7 +632,9 @@ static ssize_t fuse_direct_write(struct file *file, const char __user *buf,
 	ssize_t res;
 	/* Don't allow parallel writes to the same file */
 	mutex_lock(&inode->i_mutex);
-	res = fuse_direct_io(file, buf, count, ppos, 1);
+	res = generic_write_checks(file, ppos, &count, 0);
+	if (!res)
+		res = fuse_direct_io(file, buf, count, ppos, 1);
 	mutex_unlock(&inode->i_mutex);
 	return res;
 }
@@ -781,7 +788,9 @@ static int fuse_file_lock(struct file *file, int cmd, struct file_lock *fl)
 
 	if (cmd == F_GETLK) {
 		if (fc->no_lock) {
-#ifdef KERNEL_2_6_17_PLUS
+#ifdef KERNEL_2_6_22_PLUS
+			posix_test_lock(file, fl);
+#elif defined(KERNEL_2_6_17_PLUS)
 			if (!posix_test_lock(file, fl, fl))
 				fl->fl_type = F_UNLCK;
 #else

@@ -1,6 +1,6 @@
 /*
     FUSE: Filesystem in Userspace
-    Copyright (C) 2001-2006  Miklos Szeredi <miklos@szeredi.hu>
+    Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
     This program can be distributed under the terms of the GNU LGPL.
     See the file COPYING.LIB.
@@ -29,7 +29,7 @@ enum  {
 struct helper_opts {
     int singlethread;
     int foreground;
-    int fsname;
+    int nodefault_subtype;
     char *mountpoint;
 };
 
@@ -40,7 +40,8 @@ static const struct fuse_opt fuse_helper_opts[] = {
     FUSE_HELPER_OPT("debug",       foreground),
     FUSE_HELPER_OPT("-f",          foreground),
     FUSE_HELPER_OPT("-s",          singlethread),
-    FUSE_HELPER_OPT("fsname=",     fsname),
+    FUSE_HELPER_OPT("fsname=",     nodefault_subtype),
+    FUSE_HELPER_OPT("subtype=",    nodefault_subtype),
 
     FUSE_OPT_KEY("-h",          KEY_HELP),
     FUSE_OPT_KEY("--help",      KEY_HELP),
@@ -50,6 +51,7 @@ static const struct fuse_opt fuse_helper_opts[] = {
     FUSE_OPT_KEY("-d",          FUSE_OPT_KEY_KEEP),
     FUSE_OPT_KEY("debug",       FUSE_OPT_KEY_KEEP),
     FUSE_OPT_KEY("fsname=",     FUSE_OPT_KEY_KEEP),
+    FUSE_OPT_KEY("subtype=",    FUSE_OPT_KEY_KEEP),
     FUSE_OPT_END
 };
 
@@ -117,24 +119,24 @@ static int fuse_helper_opt_proc(void *data, const char *arg, int key,
     }
 }
 
-static int add_default_fsname(const char *progname, struct fuse_args *args)
+static int add_default_subtype(const char *progname, struct fuse_args *args)
 {
     int res;
-    char *fsname_opt;
+    char *subtype_opt;
     const char *basename = strrchr(progname, '/');
     if (basename == NULL)
         basename = progname;
     else if (basename[1] != '\0')
         basename++;
 
-    fsname_opt = (char *) malloc(strlen(basename) + 64);
-    if (fsname_opt == NULL) {
+    subtype_opt = (char *) malloc(strlen(basename) + 64);
+    if (subtype_opt == NULL) {
         fprintf(stderr, "fuse: memory allocation failed\n");
         return -1;
     }
-    sprintf(fsname_opt, "-ofsname=%s", basename);
-    res = fuse_opt_add_arg(args, fsname_opt);
-    free(fsname_opt);
+    sprintf(subtype_opt, "-osubtype=%s", basename);
+    res = fuse_opt_add_arg(args, subtype_opt);
+    free(subtype_opt);
     return res;
 }
 
@@ -149,8 +151,8 @@ int fuse_parse_cmdline(struct fuse_args *args, char **mountpoint,
     if (res == -1)
         return -1;
 
-    if (!hopts.fsname) {
-        res = add_default_fsname(args->argv[0], args);
+    if (!hopts.nodefault_subtype) {
+        res = add_default_subtype(args->argv[0], args);
         if (res == -1)
             goto err;
     }
@@ -178,13 +180,6 @@ int fuse_daemonize(int foreground)
         res = daemon(0, 0);
         if (res == -1) {
             perror("fuse: failed to daemonize program\n");
-            return -1;
-        }
-    } else {
-        /* Ensure consistant behavior across debug and normal modes */
-        res = chdir("/");
-        if (res == -1) {
-            perror("fuse: failed to change working directory to /\n");
             return -1;
         }
     }
@@ -290,12 +285,6 @@ struct fuse *fuse_setup(int argc, char *argv[],
 static void fuse_teardown_common(struct fuse *fuse, char *mountpoint)
 {
     struct fuse_session *se = fuse_get_session(fuse);
-#if (__FreeBSD__ >= 10)
-    const char *mntonname = (const char *)fuse_session_get_mntonname(se);
-    if (mntonname) {
-        volicon_fini(fuse, mntonname);
-    }
-#endif 
     struct fuse_chan *ch = fuse_session_next_chan(se, NULL);
     fuse_remove_signal_handlers(se);
     fuse_unmount_common(mountpoint, ch);
@@ -346,6 +335,11 @@ int fuse_main(void)
 {
     fprintf(stderr, "fuse_main(): This function does not exist\n");
     return -1;
+}
+
+int fuse_version(void)
+{
+    return FUSE_VERSION;
 }
 
 #include "fuse_compat.h"

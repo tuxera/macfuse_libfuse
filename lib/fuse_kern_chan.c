@@ -1,6 +1,6 @@
 /*
     FUSE: Filesystem in Userspace
-    Copyright (C) 2001-2006  Miklos Szeredi <miklos@szeredi.hu>
+    Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
     This program can be distributed under the terms of the GNU LGPL.
     See the file COPYING.LIB
@@ -36,10 +36,14 @@ static int fuse_kern_chan_receive(struct fuse_chan **chp, char *buf,
         if (err == ENOENT)
             goto restart;
 
+        if (err == ENODEV) {
+            fuse_session_exit(se);
+            return 0;
+        }
         /* Errors occuring during normal operation: EINTR (read
            interrupted), EAGAIN (nonblocking I/O), ENODEV (filesystem
            umounted) */
-        if (err != EINTR && err != EAGAIN && err != ENODEV)
+        if (err != EINTR && err != EAGAIN)
             perror("fuse: reading device");
         return -err;
     }
@@ -71,9 +75,23 @@ static int fuse_kern_chan_send(struct fuse_chan *ch, const struct iovec iov[],
     return 0;
 }
 
+#if (__FreeBSD__ >= 10)
+
+#include <sys/ioctl.h>
+
+/* should include <common/fuse_ioctl.h> for this */
+#define FUSEDEVIOCDAEMONISDYING       _IOW('F', 3,  u_int32_t)
+#endif
+
 static void fuse_kern_chan_destroy(struct fuse_chan *ch)
 {
+#if (__FreeBSD__ >= 10)
+    int fd = fuse_chan_fd(ch);
+    (void)ioctl(fd, FUSEDEVIOCDAEMONISDYING, &fd);
+    close(fd);
+#else
     close(fuse_chan_fd(ch));
+#endif
 }
 
 #define MIN_BUFSIZE 0x21000

@@ -1,6 +1,6 @@
 /*
     FUSE: Filesystem in Userspace
-    Copyright (C) 2001-2006  Miklos Szeredi <miklos@szeredi.hu>
+    Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
     This program can be distributed under the terms of the GNU LGPL.
     See the file COPYING.LIB.
@@ -8,12 +8,14 @@
 
 #include "fuse_lowlevel.h"
 #include "fuse_misc.h"
+#include "fuse_kernel.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <semaphore.h>
 #include <errno.h>
 #include <sys/time.h>
 
@@ -33,6 +35,7 @@ struct fuse_mt {
     struct fuse_session *se;
     struct fuse_chan *prevch;
     struct fuse_worker main;
+    sem_t finish;
     int exit;
     int error;
 };
@@ -62,6 +65,7 @@ static void *fuse_do_work(void *data)
     struct fuse_mt *mt = w->mt;
 
     while (!fuse_session_exited(mt->se)) {
+        int isforget = 0;
         struct fuse_chan *ch = mt->prevch;
         int res = fuse_chan_recv(&ch, w->buf, w->bufsize);
         if (res == -EINTR)
@@ -79,7 +83,16 @@ static void *fuse_do_work(void *data)
             pthread_mutex_unlock(&mt->lock);
             return NULL;
         }
-        mt->numavail--;
+
+        /*
+         * This disgusting hack is needed so that zillions of threads
+         * are not created on a burst of FORGET messages
+         */
+        if (((struct fuse_in_header *) w->buf)->opcode == FUSE_FORGET)
+            isforget = 1;
+
+        if (!isforget)
+            mt->numavail--;
         if (mt->numavail == 0)
             fuse_start_thread(mt);
         pthread_mutex_unlock(&mt->lock);
@@ -87,7 +100,8 @@ static void *fuse_do_work(void *data)
         fuse_session_process(mt->se, w->buf, res, ch);
 
         pthread_mutex_lock(&mt->lock);
-        mt->numavail ++;
+        if (!isforget)
+            mt->numavail++;
         if (mt->numavail > 10) {
             if (mt->exit) {
                 pthread_mutex_unlock(&mt->lock);
@@ -106,7 +120,7 @@ static void *fuse_do_work(void *data)
         pthread_mutex_unlock(&mt->lock);
     }
 
-    pthread_kill(mt->main.thread_id, SIGHUP);
+    sem_post(&mt->finish);
     pause();
 
     return NULL;
@@ -143,6 +157,8 @@ static int fuse_start_thread(struct fuse_mt *mt)
     pthread_sigmask(SIG_SETMASK, &oldset, NULL);
     if (res != 0) {
         fprintf(stderr, "fuse: error creating thread: %s\n", strerror(res));
+        free(w->buf);
+        free(w);
         return -1;
     }
     list_add_worker(w, &mt->main);
@@ -176,21 +192,16 @@ int fuse_session_loop_mt(struct fuse_session *se)
     mt.numavail = 0;
     mt.main.thread_id = pthread_self();
     mt.main.prev = mt.main.next = &mt.main;
+    sem_init(&mt.finish, 0, 0);
     fuse_mutex_init(&mt.lock);
 
     pthread_mutex_lock(&mt.lock);
     err = fuse_start_thread(&mt);
     pthread_mutex_unlock(&mt.lock);
     if (!err) {
-        sigset_t set;
-
-        /* We need SIGHUP for exiting */
-        sigemptyset(&set);
-        sigaddset(&set, SIGHUP);
-        pthread_sigmask(SIG_UNBLOCK, &set, NULL);
-
+        /* sem_wait() is interruptible */
         while (!fuse_session_exited(se))
-            pause();
+            sem_wait(&mt.finish);
 
         for (w = mt.main.next; w != &mt.main; w = w->next)
             pthread_cancel(w->thread_id);
@@ -204,6 +215,7 @@ int fuse_session_loop_mt(struct fuse_session *se)
     }
 
     pthread_mutex_destroy(&mt.lock);
+    sem_destroy(&mt.finish);
     fuse_session_reset(se);
     return err;
 }

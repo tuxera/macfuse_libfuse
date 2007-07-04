@@ -1,6 +1,6 @@
 /*
     FUSE: Filesystem in Userspace
-    Copyright (C) 2001-2006  Miklos Szeredi <miklos@szeredi.hu>
+    Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
     This program can be distributed under the terms of the GNU LGPL.
     See the file COPYING.LIB.
@@ -20,7 +20,7 @@
 #define FUSE_MAJOR_VERSION 2
 
 /** Minor version of FUSE library interface */
-#define FUSE_MINOR_VERSION 6
+#define FUSE_MINOR_VERSION 7
 
 #define FUSE_MAKE_VERSION(maj, min)  ((maj) * 10 + (min))
 #define FUSE_VERSION FUSE_MAKE_VERSION(FUSE_MAJOR_VERSION, FUSE_MINOR_VERSION)
@@ -160,8 +160,20 @@ void fuse_unmount(const char *mountpoint, struct fuse_chan *ch);
 int fuse_parse_cmdline(struct fuse_args *args, char **mountpoint,
                        int *multithreaded, int *foreground);
 
-
+/**
+ * Go into the background
+ *
+ * @param foreground if true, stay in the foreground
+ * @return 0 on success, -1 on failure
+ */
 int fuse_daemonize(int foreground);
+
+/**
+ * Get the version of the library
+ *
+ * @return the version
+ */
+int fuse_version(void);
 
 /* ----------------------------------------------------------- *
  * Signal handling                                             *
