@@ -1,24 +1,116 @@
-2007-04-28  Miklos Szeredi <miklos@szeredi.hu>
+2007-07-02  Miklos Szeredi <miklos@szeredi.hu>
 
-	* Released 2.6.5
+	* Released 2.7.0
 
-2007-04-28  Miklos Szeredi <miklos@szeredi.hu>
+2007-07-02  Miklos Szeredi <miklos@szeredi.hu>
 
-	* Fix in typo in mount.fuse.  Reported by Jakub Moc
+	* Accept a NULL "op" for fuse_main(), etc.  This is useful if
+	filesystem is only invoking fuse to print a help message, or
+	version.  Fixes RedHat bugzilla #217343
+
+2007-06-22  Miklos Szeredi <miklos@szeredi.hu>
+
+	* lib: fix locking when loading a filesystem module
+
+2007-06-21  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Add fs subtype support to mount.fuse
+
+2007-06-20  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Add fs subtype support to libfuse and fusermount
+
+2007-06-19  Miklos Szeredi <miklos@szeredi.hu>
+
+	* kernel: sync with mainline (2.6.22)
+
+2007-06-18  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Send debug output to stderr instead of stdout.  Patch by Jan
+	Engelhardt
+
+2007-06-03  Miklos Szeredi <miklos@szeredi.hu>
+
+	* libulockmgr: Work around a kernel bug in recv(), causing it to
+	sometimes return zero even if data was available on the socket.
+
+2007-05-29  Miklos Szeredi <miklos@szeredi.hu>
+
+	* lib: optimization: store parent pointer in node instead of
+	parent id
+
+2007-05-25  Miklos Szeredi <miklos@szeredi.hu>
+
+	* lib: don't create new thread for each FORGET request.  FORGET
+	messages sometimes caused so many threads to be created, that
+	process virtual memory space ran out.  Reported by Chris AtLee
+
+2007-05-24  Miklos Szeredi <miklos@szeredi.hu>
+
+	* lib: fix memory leak on thread creation failure in multithreaded
+	event loop.  Found by Chris AtLee
+
+2007-05-23  Miklos Szeredi <miklos@szeredi.hu>
+
+	* lowlevel lib: add fuse_reply_iov function, which is similar to
+	fuse_reply_buf, but accepts a vector of buffers.  Patch by Roger
+	Willcocks
+
+2007-05-21  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix Oops or error if a regular file is created with mknod(2) on
+	a fuse filesystem.  Kernels 2.6.18 onward are affected.  Thanks to
+	J. Cameijo Cerdeira for the report
+
+2007-05-11  Csaba Henk <csaba.henk@creo.hu>
+
+	* libfuse: fix return value of fuse_loop()/fuse_loop_mt().
+	Error reported by Csaba Henk, fix by Miklos Szeredi
+
+	* libfuse: fix unlock in flush
+
+	* libfuse: do unlocking on RELEASE+FLUSH
+ 
+2007-05-03  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Released 2.7.0-rc1
+
+2007-05-02  Miklos Szeredi <miklos@szeredi.hu>
+
+	* kernel: sync with mainline:
+
+	* Use invalidate_mapping_pages() if available
+
+	* Fix BUG when invalid file type is supplied in mount. Patch by
+	Timo Savola
 
 2007-04-27  Miklos Szeredi <miklos@szeredi.hu>
 
-	* Released 2.6.4
+	* libfuse: call umount(8) directly instead of fusermount if
+	possible
+
+	* Clean up init script, make it LSB compliant
 
 2007-04-26  Miklos Szeredi <miklos@szeredi.hu>
 
-	* Ublock SIGHUP in multithreaded loop, since it's needed for
-	exiting on unmount.  Reported by Elena
+	* In multithreaded loop, use a semaphore instead of SIGHUP to wake
+	up the main thread on umount.  This is more elegant, and works
+	even if signals are blocked.
+
+2007-04-25  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Improve mounting support in libfuse:
+	 - check non-empty mountpoint
+	 - only fall back to fusermount when necessary
+
+2007-04-23  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Don't chdir to "/" in foreground mode, it causes more trouble
+	than it's worth
 
 2007-04-18  Miklos Szeredi <miklos@szeredi.hu>
 
-	* Use patch from Debian Bug#413403 to fix problems with bash in
-	mount.fuse
+	* Replace utils/mount.fuse "sh" script with a "C" program
 
 2007-04-15  Miklos Szeredi <miklos@szeredi.hu>
 
@@ -26,13 +118,30 @@
 
 2007-04-05  Miklos Szeredi <miklos@szeredi.hu>
 
-	* mount.fuse should handle spaces in paths.  Debian Bug#417834.
-	Reported by Alexander Blazej
+	* Check for iconv.  Patch by Csaba Henk
+
+	* Add direct umounting
 
 	* Use "fusectl" as the device for the fusectl filesystem.  Debian
 	Bug#417945.  Reported by Laurent Bonnaud
 
+2007-04-01  Csaba Henk <csaba.henk@creo.hu>
+
+	* Fix some FreeBSD related macros.
+
+2007-03-30  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Add support for direct mounting by libfuse.  Fall back on
+	calling fusermount if it doesn't work
+
+2007-03-14  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Released 2.7.0-pre1
+
 2007-03-05  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Correctly handle O_APPEND in direct IO mode.  Reported by Greg
+	Bruno
 
 	* mount.fuse should use /bin/bash.  Debian Bug#413403.  Reported
 	by Thomas Weinbrenner
@@ -47,31 +156,27 @@
 	* Fix 2.6.9 RHEL kernels, which have compatibility mutex.h, but
 	don't define mutex_destroy(), bummer.  Patch from Phil Schwan
 
-	* Fix option parsing in mount.fuse.  Patch from Jens M. Noedler
-
-2007-02-04  Miklos Szeredi <miklos@szeredi.hu>
-
-	* Released 2.6.3
-
 2007-02-04  Miklos Szeredi <miklos@szeredi.hu>
 
 	* Compile fuseblk for kernels which don't have an option to turn
 	off the block layer (CONFIG_BLOCK).  Reported by Szakacsits
 	Szabolcs
 
-2007-02-02  Miklos Szeredi <miklos@szeredi.hu>
+2007-02-03  Miklos Szeredi <miklos@szeredi.hu>
 
-	* Fix regression caused by "Fix possible double lock in certain
-	cases if request is interrupted" on 2007-01-19.  Reported by José
-	Antonio Sánchez
+	* Add filesystem stacking support to high level API.  Filesystem
+	modules can be built into libfuse or loaded from shared object
+	(.so) files
+
+	* Add 'subdir' and 'iconv' built in modules
+
+	* lib/fuse.c: Fix locking for the reply code in create and open
+
+2007-02-02  Miklos Szeredi <miklos@szeredi.hu>
 
 	* kernel: make it compile on "strange" kernels which have emulated
 	mutexes via <linux/mutex.h> but no i_mutex.  Reported by Tomasz
 	Mateja
-
-2007-01-30  Miklos Szeredi <miklos@szeredi.hu>
-
-	* Released 2.6.2
 
 2007-01-28  Miklos Szeredi <miklos@szeredi.hu>
 
@@ -90,19 +195,24 @@
 	* Build fix for 2.6.16 vanila and 2.6.15 FC5 kernels.  Patch from
 	Ian Abbott
 
-	* Fix possible double lock in certain cases if request is
-	interrupted
-
 2007-01-18  Miklos Szeredi <miklos@szeredi.hu>
 
 	* Fix abort in fuse_new() compatibility API for opts == NULL case.
 	Novell bugzilla #233870.  Patch from Takashi Iwai.
+
+2007-01-13  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix option parsing in mount.fuse.  Patch from Jens M. Noedler
 
 2007-01-02  Miklos Szeredi <miklos@szeredi.hu>
 
 	* Fix unaligned access in file desctriptor passing in libfuse,
 	fusermount and ulockmgr.  Debian bug ID: 404904.  Reported and
 	tested by Sebastian Fontius
+
+2006-12-16  Miklos Szeredi <miklos@szeredi.hu>
+
+	* kernel: don't keep unreferenced inodes in the icache.
 
 2006-12-15  Miklos Szeredi <miklos@szeredi.hu>
 
@@ -111,6 +221,20 @@
 
 	* lib: Fix use after free in fuse_flush().  Reported by Ron
 	Lindman
+
+2006-12-10  Miklos Szeredi <miklos@szeredi.hu>
+
+	* mount.fuse: add "setuid=USER" option which does a "su - USER"
+	for the filesystem
+
+	* fusermount: use "/bin/mount -f" to add entry to /etc/mtab, and
+	"/bin/umount" to remove entry from /etc/mtab.  This gets rid of
+	the ugly code dealing with mtab, as well as a possible race
+	between fusermount and mount trying to modify /etc/mtab at the
+	same time
+
+	* Fix "buffer size too small: 4" warning for users of the
+	fuse_loop_mt_proc() function.
 
 2006-12-04  Miklos Szeredi <miklos@szeredi.hu>
 

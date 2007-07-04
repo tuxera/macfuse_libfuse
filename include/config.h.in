@@ -9,17 +9,14 @@
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
 
+/* Define if you have the iconv() function. */
+#undef HAVE_ICONV
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the `selinux' library (-lselinux). */
-#undef HAVE_LIBSELINUX
-
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
-
-/* Define to 1 if you have the <selinux/selinux.h> header file. */
-#undef HAVE_SELINUX_SELINUX_H
 
 /* Define to 1 if you have the `setxattr' function. */
 #undef HAVE_SETXATTR
@@ -50,6 +47,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* Define as const if the declaration of iconv() needs const. */
+#undef ICONV_CONST
 
 /* Don't update /etc/mtab */
 #undef IGNORE_MTAB

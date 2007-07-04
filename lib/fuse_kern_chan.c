@@ -1,6 +1,6 @@
 /*
     FUSE: Filesystem in Userspace
-    Copyright (C) 2001-2006  Miklos Szeredi <miklos@szeredi.hu>
+    Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
     This program can be distributed under the terms of the GNU LGPL.
     See the file COPYING.LIB
@@ -36,10 +36,14 @@ static int fuse_kern_chan_receive(struct fuse_chan **chp, char *buf,
         if (err == ENOENT)
             goto restart;
 
+        if (err == ENODEV) {
+            fuse_session_exit(se);
+            return 0;
+        }
         /* Errors occuring during normal operation: EINTR (read
            interrupted), EAGAIN (nonblocking I/O), ENODEV (filesystem
            umounted) */
-        if (err != EINTR && err != EAGAIN && err != ENODEV)
+        if (err != EINTR && err != EAGAIN)
             perror("fuse: reading device");
         return -err;
     }

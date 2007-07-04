@@ -3,6 +3,9 @@
 /* kernel has BLOCK option */
 #undef HAVE_CONFIG_BLOCK
 
+/* kernel has exportfs.h */
+#undef HAVE_EXPORTFS_H
+
 /* fs_subsys is defined */
 #undef HAVE_FS_SUBSYS
 

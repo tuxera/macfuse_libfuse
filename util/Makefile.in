@@ -38,6 +38,7 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 bin_PROGRAMS = fusermount$(EXEEXT) ulockmgr_server$(EXEEXT)
+noinst_PROGRAMS = mount.fuse$(EXEEXT)
 subdir = util
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -49,10 +50,13 @@ CONFIG_HEADER = $(top_builddir)/include/config.h
 CONFIG_CLEAN_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
-PROGRAMS = $(bin_PROGRAMS)
-am_fusermount_OBJECTS = fusermount.$(OBJEXT)
+PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
+am_fusermount_OBJECTS = fusermount-fusermount.$(OBJEXT)
 fusermount_OBJECTS = $(am_fusermount_OBJECTS)
-fusermount_LDADD = $(LDADD)
+fusermount_DEPENDENCIES = ../lib/mount_util.o
+am_mount_fuse_OBJECTS = mount.fuse.$(OBJEXT)
+mount_fuse_OBJECTS = $(am_mount_fuse_OBJECTS)
+mount_fuse_LDADD = $(LDADD)
 am_ulockmgr_server_OBJECTS =  \
 	ulockmgr_server-ulockmgr_server.$(OBJEXT)
 ulockmgr_server_OBJECTS = $(am_ulockmgr_server_OBJECTS)
@@ -68,8 +72,10 @@ LTCOMPILE = $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(fusermount_SOURCES) $(ulockmgr_server_SOURCES)
-DIST_SOURCES = $(fusermount_SOURCES) $(ulockmgr_server_SOURCES)
+SOURCES = $(fusermount_SOURCES) $(mount_fuse_SOURCES) \
+	$(ulockmgr_server_SOURCES)
+DIST_SOURCES = $(fusermount_SOURCES) $(mount_fuse_SOURCES) \
+	$(ulockmgr_server_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -100,6 +106,8 @@ EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
+ICONV_FALSE = @ICONV_FALSE@
+ICONV_TRUE = @ICONV_TRUE@
 INIT_D_PATH = @INIT_D_PATH@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -107,12 +115,14 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBICONV = @LIBICONV@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LINUX_FALSE = @LINUX_FALSE@
 LINUX_TRUE = @LINUX_TRUE@
 LN_S = @LN_S@
+LTLIBICONV = @LTLIBICONV@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MOUNT_FUSE_PATH = @MOUNT_FUSE_PATH@
@@ -187,10 +197,13 @@ target_os = @target_os@
 target_vendor = @target_vendor@
 AM_CPPFLAGS = -D_FILE_OFFSET_BITS=64 
 fusermount_SOURCES = fusermount.c
+fusermount_LDADD = ../lib/mount_util.o
+fusermount_CPPFLAGS = -I../lib
+mount_fuse_SOURCES = mount.fuse.c
 ulockmgr_server_SOURCES = ulockmgr_server.c
 ulockmgr_server_CPPFLAGS = -D_FILE_OFFSET_BITS=64 -D_REENTRANT 
 ulockmgr_server_LDFLAGS = -pthread
-EXTRA_DIST = mount.fuse udev.rules init_script
+EXTRA_DIST = udev.rules init_script
 all: all-am
 
 .SUFFIXES:
@@ -252,9 +265,19 @@ clean-binPROGRAMS:
 	  echo " rm -f $$p $$f"; \
 	  rm -f $$p $$f ; \
 	done
+
+clean-noinstPROGRAMS:
+	@list='$(noinst_PROGRAMS)'; for p in $$list; do \
+	  f=`echo $$p|sed 's/$(EXEEXT)$$//'`; \
+	  echo " rm -f $$p $$f"; \
+	  rm -f $$p $$f ; \
+	done
 fusermount$(EXEEXT): $(fusermount_OBJECTS) $(fusermount_DEPENDENCIES) 
 	@rm -f fusermount$(EXEEXT)
 	$(LINK) $(fusermount_LDFLAGS) $(fusermount_OBJECTS) $(fusermount_LDADD) $(LIBS)
+mount.fuse$(EXEEXT): $(mount_fuse_OBJECTS) $(mount_fuse_DEPENDENCIES) 
+	@rm -f mount.fuse$(EXEEXT)
+	$(LINK) $(mount_fuse_LDFLAGS) $(mount_fuse_OBJECTS) $(mount_fuse_LDADD) $(LIBS)
 ulockmgr_server$(EXEEXT): $(ulockmgr_server_OBJECTS) $(ulockmgr_server_DEPENDENCIES) 
 	@rm -f ulockmgr_server$(EXEEXT)
 	$(LINK) $(ulockmgr_server_LDFLAGS) $(ulockmgr_server_OBJECTS) $(ulockmgr_server_LDADD) $(LIBS)
@@ -265,7 +288,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fusermount.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fusermount-fusermount.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount.fuse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ulockmgr_server-ulockmgr_server.Po@am__quote@
 
 .c.o:
@@ -288,6 +312,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
+
+fusermount-fusermount.o: fusermount.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fusermount_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fusermount-fusermount.o -MD -MP -MF "$(DEPDIR)/fusermount-fusermount.Tpo" -c -o fusermount-fusermount.o `test -f 'fusermount.c' || echo '$(srcdir)/'`fusermount.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/fusermount-fusermount.Tpo" "$(DEPDIR)/fusermount-fusermount.Po"; else rm -f "$(DEPDIR)/fusermount-fusermount.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fusermount.c' object='fusermount-fusermount.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fusermount_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fusermount-fusermount.o `test -f 'fusermount.c' || echo '$(srcdir)/'`fusermount.c
+
+fusermount-fusermount.obj: fusermount.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fusermount_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fusermount-fusermount.obj -MD -MP -MF "$(DEPDIR)/fusermount-fusermount.Tpo" -c -o fusermount-fusermount.obj `if test -f 'fusermount.c'; then $(CYGPATH_W) 'fusermount.c'; else $(CYGPATH_W) '$(srcdir)/fusermount.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/fusermount-fusermount.Tpo" "$(DEPDIR)/fusermount-fusermount.Po"; else rm -f "$(DEPDIR)/fusermount-fusermount.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fusermount.c' object='fusermount-fusermount.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(fusermount_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fusermount-fusermount.obj `if test -f 'fusermount.c'; then $(CYGPATH_W) 'fusermount.c'; else $(CYGPATH_W) '$(srcdir)/fusermount.c'; fi`
 
 ulockmgr_server-ulockmgr_server.o: ulockmgr_server.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(ulockmgr_server_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ulockmgr_server-ulockmgr_server.o -MD -MP -MF "$(DEPDIR)/ulockmgr_server-ulockmgr_server.Tpo" -c -o ulockmgr_server-ulockmgr_server.o `test -f 'ulockmgr_server.c' || echo '$(srcdir)/'`ulockmgr_server.c; \
@@ -421,7 +459,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-libtool \
+	clean-noinstPROGRAMS mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -472,14 +511,14 @@ ps-am:
 uninstall-am: uninstall-binPROGRAMS uninstall-info-am uninstall-local
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-binPROGRAMS \
-	clean-generic clean-libtool ctags distclean distclean-compile \
-	distclean-generic distclean-libtool distclean-tags distdir dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-binPROGRAMS install-data install-data-am \
-	install-data-local install-exec install-exec-am \
-	install-exec-hook install-exec-local install-info \
-	install-info-am install-man install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
+	clean-generic clean-libtool clean-noinstPROGRAMS ctags \
+	distclean distclean-compile distclean-generic \
+	distclean-libtool distclean-tags distdir dvi dvi-am html \
+	html-am info info-am install install-am install-binPROGRAMS \
+	install-data install-data-am install-data-local install-exec \
+	install-exec-am install-exec-hook install-exec-local \
+	install-info install-info-am install-man install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-binPROGRAMS \

@@ -8,7 +8,13 @@ lib_LTLIBRARIES = libfuse.la libulockmgr.la
 if BSD
 mount_source = mount_bsd.c
 else
-mount_source = mount.c
+mount_source = mount.c mount_util.c mount_util.h
+endif
+
+if ICONV
+iconv_source = modules/iconv.c
+else
+iconv_source =
 endif
 
 libfuse_la_SOURCES = 		\
@@ -24,9 +30,11 @@ libfuse_la_SOURCES = 		\
 	fuse_session.c		\
 	fuse_signals.c		\
 	helper.c		\
+	modules/subdir.c	\
+	$(iconv_source)		\
 	$(mount_source)
 
-libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:6:5 \
+libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:0 \
 	-Wl,--version-script,$(srcdir)/fuse_versionscript
 
 libulockmgr_la_SOURCES = ulockmgr.c

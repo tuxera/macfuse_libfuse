@@ -1,6 +1,6 @@
 /*
     FUSE: Filesystem in Userspace
-    Copyright (C) 2001-2006  Miklos Szeredi <miklos@szeredi.hu>
+    Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
     This program can be distributed under the terms of the GNU GPL.
     See the file COPYING.
@@ -10,7 +10,9 @@
 
 #define FUSE_USE_VERSION 26
 
+#ifdef HAVE_CONFIG_H
 #include <config.h>
+#endif
 
 #ifdef linux
 /* For pread()/pwrite() */
