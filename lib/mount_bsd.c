@@ -105,7 +105,6 @@ enum {
     KEY_KERN
 #if (__FreeBSD__ >= 10)
     ,
-    KEY_ICON,
     KEY_DIO,
 #endif
 };
@@ -197,6 +196,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("extended_security",   KEY_KERN),
     FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
+    FUSE_OPT_KEY("fssubtype=",          KEY_KERN),
     FUSE_OPT_KEY("init_timeout=",       KEY_KERN),
     FUSE_OPT_KEY("iosize=",             KEY_KERN),
     FUSE_OPT_KEY("jail_symlinks",       KEY_KERN),
@@ -216,7 +216,6 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("novncache",           KEY_KERN),
     FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
     FUSE_OPT_KEY("subtype=",            KEY_KERN),
-    FUSE_OPT_KEY("volicon=",            KEY_ICON),
     FUSE_OPT_KEY("volname=",            KEY_KERN),
 #else
     /* Linux specific mount options, but let just the mount util handle them */
@@ -262,13 +261,6 @@ static int fuse_mount_opt_proc(void *data, const char *arg, int key,
         return fuse_opt_add_opt(&mo->kernel_opts, arg);
 
 #if (__FreeBSD__ >= 10)
-    case KEY_ICON:
-          if (fuse_opt_add_opt(&mo->kernel_opts, "volicon") == -1 ||
-              (fuse_opt_add_arg(outargs, "-o") == -1) ||
-              (fuse_opt_add_arg(outargs, arg) == -1))
-            return -1;
-        return 0;
-
     case KEY_DIO:
           if (fuse_opt_add_opt(&mo->kernel_opts, "direct_io") == -1 ||
               (fuse_opt_add_arg(outargs, "-odirect_io") == -1))
