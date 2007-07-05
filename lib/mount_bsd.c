@@ -199,6 +199,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("extended_security",   KEY_KERN),
     FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
+    FUSE_OPT_KEY("fssubtype=",          KEY_KERN),
     FUSE_OPT_KEY("init_timeout=",       KEY_KERN),
     FUSE_OPT_KEY("iosize=",             KEY_KERN),
     FUSE_OPT_KEY("jail_symlinks",       KEY_KERN),
@@ -399,7 +400,6 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
     char *fdnam, *dev;
     int pid;
 #if (__FreeBSD__ >= 10)
-    char *subtype;
     int ibg = 0;
 
     if (!mountpoint) {
