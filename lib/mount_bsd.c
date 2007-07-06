@@ -37,6 +37,38 @@
 #include <AssertMacros.h>
 
 static const char *MacFUSE = "MacFUSE version 0.5.0, " __DATE__ ", " __TIME__;
+static int quiet_mode = 0;
+
+static long
+os_version_major(void)
+{
+    int ret = 0;
+    long major = 0;
+    char *c = NULL;
+    struct utsname u;
+    size_t oldlen;
+
+    oldlen = sizeof(u.release);
+
+    ret = sysctlbyname("kern.osrelease", u.release, &oldlen, NULL, 0);
+    if (ret != 0) {
+        return -1;
+    }
+
+    c = strchr(u.release, '.');
+    if (c == NULL) {
+        return -1;
+    }
+
+    *c = '\0';
+
+    major = strtol(u.release, NULL, 10);
+    if ((errno == EINVAL) || (errno == ERANGE)) {
+        return -1;
+    }
+
+    return major;
+}
 
 __unused static int
 checkloadable_unused(void)
@@ -61,6 +93,13 @@ loadkmod()
     int result = -1;
     int pid, terminated_pid;
     union wait status;
+    long major;
+
+    major = os_version_major();
+
+    if (major != 8) { /* not Mac OS X 10.4.x */
+        return EINVAL;
+    }
 
     pid = fork();
 
@@ -106,6 +145,7 @@ enum {
 #if (__FreeBSD__ >= 10)
     ,
     KEY_DIO,
+    KEY_QUIET,
 #endif
 };
 
@@ -215,6 +255,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("noubc",               KEY_KERN),
     FUSE_OPT_KEY("novncache",           KEY_KERN),
     FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
+    FUSE_OPT_KEY("quiet",               KEY_KERN),
     FUSE_OPT_KEY("subtype=",            KEY_KERN),
     FUSE_OPT_KEY("volname=",            KEY_KERN),
 #else
@@ -265,6 +306,10 @@ static int fuse_mount_opt_proc(void *data, const char *arg, int key,
           if (fuse_opt_add_opt(&mo->kernel_opts, "direct_io") == -1 ||
               (fuse_opt_add_arg(outargs, "-odirect_io") == -1))
             return -1;
+        return 0;
+
+    case KEY_QUIET:
+        quiet_mode = 1;
         return 0;
 #endif
 
@@ -405,18 +450,38 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
     if (checkloadable()) {
         int result = loadkmod();
         if (result) {
-            if (result == EBUSY) {
-                CFOptionFlags responseFlags;
-                CFUserNotificationDisplayNotice(
-                    (CFTimeInterval)0,
-                    kCFUserNotificationCautionAlertLevel,
-                    (CFURLRef)0,
-                    (CFURLRef)0,
-                    (CFURLRef)0,
-                    CFSTR("MacFUSE Version Mismatch"),
-                    CFSTR("MacFUSE has been updated but an incompatible or old version of the MacFUSE kernel extension is already loaded. It failed to unload, possibly because a MacFUSE volume is currently mounted.\n\nPlease eject all MacFUSE volumes and try again, or simply restart the system for changes to take effect."),
-                    CFSTR("OK")
-                );
+            CFOptionFlags responseFlags;
+            if (result == EINVAL) {
+                if (!quiet_mode) {
+                    CFUserNotificationDisplayNotice(
+                        (CFTimeInterval)0,
+                        kCFUserNotificationCautionAlertLevel,
+                        (CFURLRef)0,
+                        (CFURLRef)0,
+                        (CFURLRef)0,
+                        CFSTR("Operating System Too New"),
+                        CFSTR("The installed MacFUSE version is too old for the operating system. Please upgrade your MacFUSE installation to one that is compatible with the currently running operating system."),
+                        CFSTR("OK")
+                    );
+                }
+                post_notification(
+                    LIBFUSE_UNOTIFICATIONS_NOTIFY_OSISTOONEW,
+                    NULL, NULL, 0);
+            } else if (result == EBUSY) {
+                if (!quiet_mode) {
+                    CFUserNotificationDisplayNotice(
+                        (CFTimeInterval)0,
+                        kCFUserNotificationCautionAlertLevel,
+                        (CFURLRef)0,
+                        (CFURLRef)0,
+                        (CFURLRef)0,
+                        CFSTR("MacFUSE Version Mismatch"),
+                        CFSTR("MacFUSE has been updated but an incompatible or old version of the MacFUSE kernel extension is already loaded. It failed to unload, possibly because a MacFUSE volume is currently mounted.\n\nPlease eject all MacFUSE volumes and try again, or simply restart the system for changes to take effect."),
+                        CFSTR("OK")
+                    );
+                } 
+                post_notification(LIBFUSE_UNOTIFICATIONS_NOTIFY_VERSIONMISMATCH,
+                                  NULL, NULL, 0);
             }
             fprintf(stderr, "fusefs file system is not available (%d)\n",
                     result);

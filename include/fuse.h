@@ -817,4 +817,22 @@ struct fuse_session *fuse_get_session(struct fuse *f);
 }
 #endif
 
+#if (__FreeBSD__ >= 10)
+
+#define LIBFUSE_BUNDLE_IDENTIFIER "com.google.filesystems.libfuse"
+
+#define LIBFUSE_UNOTIFICATIONS_OBJECT                 \
+    LIBFUSE_BUNDLE_IDENTIFIER ".unotifications"
+
+#define LIBFUSE_UNOTIFICATIONS_NOTIFY_OSISTOONEW      \
+    LIBFUSE_BUNDLE_IDENTIFIER ".osistoonew"
+
+#define LIBFUSE_UNOTIFICATIONS_NOTIFY_OSISTOOOLD      \
+    LIBFUSE_BUNDLE_IDENTIFIER ".osistooold"
+
+#define LIBFUSE_UNOTIFICATIONS_NOTIFY_VERSIONMISMATCH \
+    LIBFUSE_BUNDLE_IDENTIFIER ".versionmismatch"
+
+#endif
+
 #endif /* _FUSE_H_ */
