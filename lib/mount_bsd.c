@@ -532,7 +532,7 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
                         (CFURLRef)0,
                         (CFURLRef)0,
                         CFSTR("Operating System Too Old"),
-                        CFSTR("The installed MacFUSE version is too new for the operating system version. Please downgrade your MacFUSE installation to one that is compatible with the currently running operating system."),
+                        CFSTR("The installed MacFUSE version is too new for the operating system. Please downgrade your MacFUSE installation to one that is compatible with the currently running operating system."),
                         CFSTR("OK")
                     );
                 }
