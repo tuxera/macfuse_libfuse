@@ -134,6 +134,72 @@ Return:
     return result;
 }
 
+static int
+post_notification(char   *name,
+                  char   *udata_keys[],
+                  char   *udata_values[],
+                  CFIndex nf_num)
+{
+    CFIndex i;
+    CFStringRef nf_name   = NULL;
+    CFStringRef nf_object = NULL;
+    CFMutableDictionaryRef nf_udata  = NULL;
+
+    CFNotificationCenterRef distributedCenter;
+    CFStringEncoding encoding = kCFStringEncodingASCII;
+
+    distributedCenter = CFNotificationCenterGetDistributedCenter();
+
+    if (!distributedCenter) {
+        return -1;
+    }
+
+    nf_name = CFStringCreateWithCString(kCFAllocatorDefault, name, encoding);
+      
+    nf_object = CFStringCreateWithCString(kCFAllocatorDefault,
+                                          LIBFUSE_UNOTIFICATIONS_OBJECT,
+                                          encoding);
+ 
+    nf_udata = CFDictionaryCreateMutable(kCFAllocatorDefault,
+                                         nf_num,
+                                         &kCFCopyStringDictionaryKeyCallBacks,
+                                         &kCFTypeDictionaryValueCallBacks);
+
+    if (!nf_name || !nf_object || !nf_udata) {
+        goto out;
+    }
+
+    for (i = 0; i < nf_num; i++) {
+        CFStringRef a_key = CFStringCreateWithCString(kCFAllocatorDefault,
+                                                      udata_keys[i],
+                                                      kCFStringEncodingASCII);
+        CFStringRef a_value = CFStringCreateWithCString(kCFAllocatorDefault,
+                                                        udata_values[i],
+                                                        kCFStringEncodingASCII);
+        CFDictionarySetValue(nf_udata, a_key, a_value);
+        CFRelease(a_key);
+        CFRelease(a_value);
+    }
+
+    CFNotificationCenterPostNotification(distributedCenter,
+                                         nf_name, nf_object, nf_udata, false);
+
+out:
+    if (nf_name) {
+        CFRelease(nf_name);
+    }
+
+    if (nf_object) {
+        CFRelease(nf_object);
+    }
+
+    if (nf_udata) {
+        CFRelease(nf_udata);
+    }
+
+    return 0;
+}
+
 #else
 #define FUSERMOUNT_PROG         "mount_fusefs"
 #define FUSE_DEV_TRUNK          "/dev/fuse"
@@ -462,7 +528,7 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
                         (CFURLRef)0,
                         (CFURLRef)0,
                         (CFURLRef)0,
-                        CFSTR("Operating System Too New"),
+                        CFSTR("MacFUSE Version Too Old"),
                         CFSTR("The installed MacFUSE version is too old for the operating system. Please upgrade your MacFUSE installation to one that is compatible with the currently running operating system."),
                         CFSTR("OK")
                     );
