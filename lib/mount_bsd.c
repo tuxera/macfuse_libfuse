@@ -28,6 +28,9 @@
 #include <paths.h>
 
 #if (__FreeBSD__ >= 10)
+
+#include <sys/utsname.h>
+
 #define FUSERMOUNT_PROG  "/System/Library/Filesystems/fusefs.fs/Support/mount_fusefs"
 #define FUSE_DEV_TRUNK   "/dev/fuse"
 #define PRIVATE_LOAD_COMMAND "/System/Library/Filesystems/fusefs.fs/Support/load_fusefs"
