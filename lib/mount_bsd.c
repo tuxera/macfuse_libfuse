@@ -316,6 +316,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("noattrcache",         KEY_KERN),
     FUSE_OPT_KEY("noauthopaque",        KEY_KERN),
     FUSE_OPT_KEY("noauthopaqueaccess",  KEY_KERN),
+    FUSE_OPT_KEY("noautoextattr",       KEY_KERN),
     FUSE_OPT_KEY("nobrowse",            KEY_KERN),
     FUSE_OPT_KEY("nolocalcaches",       KEY_KERN),
     FUSE_OPT_KEY("noping_diskarb",      KEY_KERN),
