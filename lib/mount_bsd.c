@@ -30,6 +30,7 @@
 #if (__FreeBSD__ >= 10)
 
 #include <libproc.h>
+#include <sys/utsname.h>
 
 #define FUSERMOUNT_PROG  "/System/Library/Filesystems/fusefs.fs/Support/mount_fusefs"
 #define FUSE_DEV_TRUNK   "/dev/fuse"
@@ -40,6 +41,38 @@
 #include <AssertMacros.h>
 
 static const char *MacFUSE = "MacFUSE version 0.5.0, " __DATE__ ", " __TIME__;
+static int quiet_mode = 0;
+
+static long
+os_version_major(void)
+{
+    int ret = 0;
+    long major = 0;
+    char *c = NULL;
+    struct utsname u;
+    size_t oldlen;
+
+    oldlen = sizeof(u.release);
+
+    ret = sysctlbyname("kern.osrelease", u.release, &oldlen, NULL, 0);
+    if (ret != 0) {
+        return -1;
+    }
+
+    c = strchr(u.release, '.');
+    if (c == NULL) {
+        return -1;
+    }
+
+    *c = '\0';
+
+    major = strtol(u.release, NULL, 10);
+    if ((errno == EINVAL) || (errno == ERANGE)) {
+        return -1;
+    }
+
+    return major;
+}
 
 __unused static int
 checkloadable_unused(void)
@@ -64,6 +97,13 @@ loadkmod()
     int result = -1;
     int pid, terminated_pid;
     union wait status;
+    long major;
+
+    major = os_version_major();
+
+    if (major < 9) { /* not Mac OS X 10.5+ */
+        return EINVAL;
+    }
 
     pid = fork();
 
@@ -95,6 +135,72 @@ Return:
     return result;
 }
 
+static int
+post_notification(char   *name,
+                  char   *udata_keys[],
+                  char   *udata_values[],
+                  CFIndex nf_num)
+{
+    CFIndex i;
+    CFStringRef nf_name   = NULL;
+    CFStringRef nf_object = NULL;
+    CFMutableDictionaryRef nf_udata  = NULL;
+
+    CFNotificationCenterRef distributedCenter;
+    CFStringEncoding encoding = kCFStringEncodingASCII;
+
+    distributedCenter = CFNotificationCenterGetDistributedCenter();
+
+    if (!distributedCenter) {
+        return -1;
+    }
+
+    nf_name = CFStringCreateWithCString(kCFAllocatorDefault, name, encoding);
+      
+    nf_object = CFStringCreateWithCString(kCFAllocatorDefault,
+                                          LIBFUSE_UNOTIFICATIONS_OBJECT,
+                                          encoding);
+ 
+    nf_udata = CFDictionaryCreateMutable(kCFAllocatorDefault,
+                                         nf_num,
+                                         &kCFCopyStringDictionaryKeyCallBacks,
+                                         &kCFTypeDictionaryValueCallBacks);
+
+    if (!nf_name || !nf_object || !nf_udata) {
+        goto out;
+    }
+
+    for (i = 0; i < nf_num; i++) {
+        CFStringRef a_key = CFStringCreateWithCString(kCFAllocatorDefault,
+                                                      udata_keys[i],
+                                                      kCFStringEncodingASCII);
+        CFStringRef a_value = CFStringCreateWithCString(kCFAllocatorDefault,
+                                                        udata_values[i],
+                                                        kCFStringEncodingASCII);
+        CFDictionarySetValue(nf_udata, a_key, a_value);
+        CFRelease(a_key);
+        CFRelease(a_value);
+    }
+
+    CFNotificationCenterPostNotification(distributedCenter,
+                                         nf_name, nf_object, nf_udata, false);
+
+out:
+    if (nf_name) {
+        CFRelease(nf_name);
+    }
+
+    if (nf_object) {
+        CFRelease(nf_object);
+    }
+
+    if (nf_udata) {
+        CFRelease(nf_udata);
+    }
+
+    return 0;
+}
+
 #else
 #define FUSERMOUNT_PROG         "mount_fusefs"
 #define FUSE_DEV_TRUNK          "/dev/fuse"
@@ -109,6 +215,7 @@ enum {
 #if (__FreeBSD__ >= 10)
     ,
     KEY_DIO,
+    KEY_QUIET,
 #endif
 };
 
@@ -218,6 +325,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("noubc",               KEY_KERN),
     FUSE_OPT_KEY("novncache",           KEY_KERN),
     FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
+    FUSE_OPT_KEY("quiet",               KEY_QUIET),
     FUSE_OPT_KEY("subtype=",            KEY_KERN),
     FUSE_OPT_KEY("volname=",            KEY_KERN),
 #else
@@ -268,6 +376,10 @@ static int fuse_mount_opt_proc(void *data, const char *arg, int key,
           if (fuse_opt_add_opt(&mo->kernel_opts, "direct_io") == -1 ||
               (fuse_opt_add_arg(outargs, "-odirect_io") == -1))
             return -1;
+        return 0;
+
+    case KEY_QUIET:
+        quiet_mode = 1;
         return 0;
 #endif
 
@@ -410,18 +522,38 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
     if (checkloadable()) {
         int result = loadkmod();
         if (result) {
-            if (result == EBUSY) {
-                CFOptionFlags responseFlags;
-                CFUserNotificationDisplayNotice(
-                    (CFTimeInterval)0,
-                    kCFUserNotificationCautionAlertLevel,
-                    (CFURLRef)0,
-                    (CFURLRef)0,
-                    (CFURLRef)0,
-                    CFSTR("MacFUSE Version Mismatch"),
-                    CFSTR("MacFUSE has been updated but an incompatible or old version of the MacFUSE kernel extension is already loaded. It failed to unload, possibly because a MacFUSE volume is currently mounted.\n\nPlease eject all MacFUSE volumes and try again, or simply restart the system for changes to take effect."),
-                    CFSTR("OK")
-                );
+            CFOptionFlags responseFlags;
+            if (result == EINVAL) {
+                if (!quiet_mode) {
+                    CFUserNotificationDisplayNotice(
+                        (CFTimeInterval)0,
+                        kCFUserNotificationCautionAlertLevel,
+                        (CFURLRef)0,
+                        (CFURLRef)0,
+                        (CFURLRef)0,
+                        CFSTR("Operating System Too Old"),
+                        CFSTR("The installed MacFUSE version is too new for the operating system version. Please downgrade your MacFUSE installation to one that is compatible with the currently running operating system."),
+                        CFSTR("OK")
+                    );
+                }
+                post_notification(
+                    LIBFUSE_UNOTIFICATIONS_NOTIFY_OSISTOOOLD,
+                    NULL, NULL, 0);
+            } else if (result == EBUSY) {
+                if (!quiet_mode) {
+                    CFUserNotificationDisplayNotice(
+                        (CFTimeInterval)0,
+                        kCFUserNotificationCautionAlertLevel,
+                        (CFURLRef)0,
+                        (CFURLRef)0,
+                        (CFURLRef)0,
+                        CFSTR("MacFUSE Version Mismatch"),
+                        CFSTR("MacFUSE has been updated but an incompatible or old version of the MacFUSE kernel extension is already loaded. It failed to unload, possibly because a MacFUSE volume is currently mounted.\n\nPlease eject all MacFUSE volumes and try again, or simply restart the system for changes to take effect."),
+                        CFSTR("OK")
+                    );
+                }
+                post_notification(LIBFUSE_UNOTIFICATIONS_NOTIFY_VERSIONMISMATCH,
+                                  NULL, NULL, 0);
             }
             fprintf(stderr, "fusefs file system is not available (%d)\n",
                     result);
