@@ -108,6 +108,19 @@ static int fuse_helper_opt_proc(void *data, const char *arg, int key,
                 fprintf(stderr, "fuse: bad mount point `%s': %s\n", arg, strerror(errno));
                 return -1;
             }
+#if (__FreeBSD__ >= 10)
+            else {
+                struct stat sb;
+                if (stat(mountpoint, &sb) != 0) {
+                    fprintf(stderr, "fuse: failed to stat mount point `%s': %s\n", mountpoint, strerror(errno));
+                    return -1;
+                }
+                if ((sb.st_mode & S_IFMT) != S_IFDIR) {
+                    fprintf(stderr, "fuse: mount point is not a directory `%s'\n", mountpoint);
+                    return -1;
+                }
+            }
+#endif
             return fuse_opt_add_opt(&hopts->mountpoint, mountpoint);
         } else {
             fprintf(stderr, "fuse: invalid argument `%s'\n", arg);
