@@ -218,6 +218,18 @@ void fuse_unmount(const char *mountpoint, struct fuse_chan *ch)
     fuse_unmount_common(mountpoint, ch);
 }
 
+#if (__FreeBSD__ >= 10)
+#include <sys/param.h>
+
+static char recorded_mountpoint[MAXPATHLEN] = { 0 };
+
+const char *
+fuse_get_mountpoint(void)
+{
+    return &(recorded_mountpoint[0]);
+}
+#endif
+
 static struct fuse *fuse_setup_common(int argc, char *argv[],
                                       const struct fuse_operations *op,
                                       size_t op_size,
@@ -242,6 +254,12 @@ static struct fuse *fuse_setup_common(int argc, char *argv[],
         fuse_opt_free_args(&args);
         goto err_free;
     }
+
+#if (__FreeBSD__ >= 10)
+    if (*mountpoint) {
+        strncpy(recorded_mountpoint, *mountpoint, MAXPATHLEN);
+    }
+#endif
 
     fuse = fuse_new_common(ch, &args, op, op_size, user_data, compat);
     fuse_opt_free_args(&args);

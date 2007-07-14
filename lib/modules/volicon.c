@@ -58,7 +58,7 @@ struct volicon {
     char *volicon_data;
     off_t volicon_size;
     uid_t volicon_uid;
-    char *mntpath;
+    const char *mntpath;
 };
 
 static struct volicon *
@@ -419,7 +419,9 @@ volicon_destroy(void *data)
 
     free(d->volicon);
     free(d->volicon_data);
-    free(d->mntpath);
+
+    /* free(d->mntpath); */
+
     free(d);
 
     return;
@@ -601,10 +603,10 @@ volicon_new(struct fuse_args *args, struct fuse_fs *next[])
         return NULL;
     }
 
-    if (*_NSGetArgc() > 1) {
-        d->mntpath = strdup((*_NSGetArgv())[1]);
-        if (!d->mntpath)
-            goto out_free;
+    extern const char *fuse_get_mountpoint(void);
+    d->mntpath = fuse_get_mountpoint();
+    if (!d->mntpath) {
+        goto out_free;
     }
 
     if (fuse_opt_parse(args, d, volicon_opts, volicon_opt_proc) == -1) {
@@ -704,9 +706,11 @@ volicon_new(struct fuse_args *args, struct fuse_fs *next[])
         free(d->volicon);
     }
 
+/*
     if (d->mntpath) {
         free(d->mntpath);
     }
+*/
 
     free(d);
 
