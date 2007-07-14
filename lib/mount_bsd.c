@@ -50,10 +50,13 @@ os_version_major(void)
     char *c = NULL;
     struct utsname u;
     size_t oldlen;
+    int mib[2];
 
     oldlen = sizeof(u.release);
 
-    ret = sysctlbyname("kern.osrelease", u.release, &oldlen, NULL, 0);
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_OSRELEASE;
+    ret = sysctl(mib, 2, u.release, &oldlen, NULL, 0);
     if (ret != 0) {
         return -1;
     }

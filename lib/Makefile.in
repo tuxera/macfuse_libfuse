@@ -61,6 +61,9 @@ am__libfuse_la_SOURCES_DIST = fuse.c fuse_i.h fuse_kern_chan.c \
 	fuse_mt.c fuse_opt.c fuse_session.c fuse_signals.c helper.c \
 	modules/subdir.c modules/iconv.c mount.c mount_util.c \
 	mount_util.h mount_bsd.c
+ifeq (@host_vendor@, apple)
+am__libfuse_la_SOURCES_DIST += modules/volicon.c
+endif
 @ICONV_TRUE@am__objects_1 = iconv.lo
 ifeq (@host_vendor@, apple)
 am__objects_1 = mount_bsd.lo
@@ -72,6 +75,9 @@ am_libfuse_la_OBJECTS = fuse.lo fuse_kern_chan.lo fuse_loop.lo \
 	fuse_loop_mt.lo fuse_lowlevel.lo fuse_mt.lo fuse_opt.lo \
 	fuse_session.lo fuse_signals.lo helper.lo subdir.lo \
 	$(am__objects_1) $(am__objects_2)
+ifeq (@host_vendor@, apple)
+am_libfuse_la_OBJECTS += volicon.lo
+endif
 libfuse_la_OBJECTS = $(am_libfuse_la_OBJECTS)
 libulockmgr_la_LIBADD =
 am_libulockmgr_la_OBJECTS = ulockmgr.lo
@@ -239,6 +245,7 @@ libfuse_la_SOURCES = \
 	$(mount_source)
 
 ifeq ($(host_vendor), apple)
+libfuse_la_SOURCES += modules/volicon.c
 libfuse_la_LDFLAGS = @libfuse_libs@
 else
 libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:0 \
@@ -335,6 +342,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount_util.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/subdir.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ulockmgr.Plo@am__quote@
+ifeq (@host_vendor@, apple)
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/volicon.Plo@am__quote@
+endif
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
@@ -370,6 +380,15 @@ iconv.lo: modules/iconv.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='modules/iconv.c' object='iconv.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o iconv.lo `test -f 'modules/iconv.c' || echo '$(srcdir)/'`modules/iconv.c
+
+ifeq (@host_vendor@, apple)
+volicon.lo: modules/volicon.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT volicon.lo -MD -MP -MF "$(DEPDIR)/volicon.Tpo" -c -o volicon.lo `test -f 'modules/volicon.c' || echo '$(srcdir)/'`modules/volicon.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/volicon.Tpo" "$(DEPDIR)/volicon.Plo"; else rm -f "$(DEPDIR)/volicon.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='modules/volicon.c' object='volicon.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o volicon.lo `test -f 'modules/volicon.c' || echo '$(srcdir)/'`modules/volicon.c
+endif
 
 mostlyclean-libtool:
 	-rm -f *.lo
