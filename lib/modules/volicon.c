@@ -135,7 +135,7 @@ volicon_getdir(const char *path, struct fuse_dirhandle *dh,
 {
     ERROR_IF_MAGIC_FILE(path, ENOTDIR);
 
-    return fuse_fs_getdir(path, dh, filler_old);
+    return fuse_fs_getdir(volicon_get()->next, path, dh, filler_old);
 }
 
 static int
