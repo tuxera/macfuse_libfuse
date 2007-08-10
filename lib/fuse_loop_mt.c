@@ -15,9 +15,32 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#if !(__FreeBSD__ >= 10)
 #include <semaphore.h>
+#endif
 #include <errno.h>
 #include <sys/time.h>
+
+#if (__FreeBSD__ >= 10)
+
+#undef sem_t
+
+#undef sem_init
+#undef sem_destroy
+#undef sem_post
+#undef sem_wait
+
+#include <mach/mach.h>
+
+typedef semaphore_t sem_t;
+
+#define sem_init(s, a, b) \
+    semaphore_create(mach_task_self(), (s), SYNC_POLICY_FIFO, 0)
+#define sem_destroy(s) semaphore_destroy(mach_task_self(), (semaphore_t)*(s))
+#define sem_post(s)    semaphore_signal((semaphore_t)*(s))
+#define sem_wait(s)    semaphore_wait((semaphore_t)*(s))
+
+#endif
 
 struct fuse_worker {
     struct fuse_worker *prev;
