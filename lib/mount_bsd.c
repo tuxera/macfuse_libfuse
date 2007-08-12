@@ -66,6 +66,7 @@ os_version_major(void)
 
     *c = '\0';
 
+    errno = 0;
     major = strtol(u.release, NULL, 10);
     if ((errno == EINVAL) || (errno == ERANGE)) {
         return -1;
