@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #define _POSIX_C_SOURCE 200112L
 #include <sys/attr.h>
+#include <sys/xattr.h>
 #include <sys/vnode.h>
 #include <fuse.h>
 #include <libgen.h>
@@ -24,24 +25,17 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define VOLICON_DOTUDOT_MAGIC_PATH "/._."
+#define VOLICON_ROOT_MAGIC_PATH    "/"
 #define VOLICON_ICON_MAGIC_PATH    "/.VolumeIcon.icns"
 #define VOLICON_ICON_MAXSIZE       (1024 * 1024)
 
-static const char dotudot_data[] = {
-     0x00, 0x05, 0x16, 0x07, 0x00, 0x02, 0x00, 0x00,
-     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-     0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00,
-     0x00, 0x32, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00,
-     0x00, 0x02, 0x00, 0x00, 0x00, 0x52, 0x00, 0x00,
-     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-     0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
-     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-     0x00, 0x00                                                        
+static const char finder_info[32] = {
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x4, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 };
-#define DOTUDOT_DATA_LEN (sizeof(dotudot_data)/sizeof(dotudot_data[0]))
+#define XATTR_FINDERINFO_SIZE 32
 
 #define ERROR_IF_MAGIC_FILE(path, e)     \
     if (volicon_is_a_magic_file(path)) { \
@@ -70,16 +64,9 @@ volicon_is_icon_magic_file(const char *path)
 }
 
 static __inline__ int
-volicon_is_dotudot_magic_file(const char *path)
-{
-    return (!strcmp(path, VOLICON_DOTUDOT_MAGIC_PATH));
-}
-
-static __inline__ int
 volicon_is_a_magic_file(const char *path)
 {
-    return (volicon_is_icon_magic_file(path) ||
-            volicon_is_dotudot_magic_file(path));
+    return (volicon_is_icon_magic_file(path));
 }
 
 /*
@@ -101,17 +88,6 @@ volicon_getattr(const char *path, struct stat *buf)
         buf->st_uid   = volicon_get()->volicon_uid;
         buf->st_gid = 0;
         buf->st_size  = volicon_get()->volicon_size;
-        buf->st_atime = buf->st_ctime = buf->st_mtime = time(NULL);
-
-    } else if (volicon_is_dotudot_magic_file(path)) {
-
-        memset((void *)buf, 0, sizeof(struct stat));
-
-        buf->st_mode  = S_IFREG | 0444;
-        buf->st_nlink = 1;
-        buf->st_uid   = volicon_get()->volicon_uid;
-        buf->st_gid = 0;
-        buf->st_size  = DOTUDOT_DATA_LEN;
         buf->st_atime = buf->st_ctime = buf->st_mtime = time(NULL);
 
     } else {
@@ -256,15 +232,6 @@ volicon_read(const char *path, char *buf, size_t size, off_t off,
             memcpy(buf, (char *)(volicon_get()->volicon_data) + off, a_size);
             res = a_size;
         }
-    } else if (volicon_is_dotudot_magic_file(path)) {
-        size_t a_size = size;
-        if (off < DOTUDOT_DATA_LEN) {
-            if ((off + size) > DOTUDOT_DATA_LEN) {
-                a_size = DOTUDOT_DATA_LEN - off;
-            }
-            memcpy(buf, (char *)(dotudot_data) + off, a_size);
-            res = a_size;
-        }
     } else {
         res = fuse_fs_read(volicon_get()->next, path, buf, size, off, fi);
     }
@@ -322,6 +289,18 @@ volicon_setxattr(const char *path, const char *name, const char *value,
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
+    /*
+     * XXX: Until listxattr() is changed to return the /union/ of
+     * XATTR_FINDERINFO_NAME and any other extended attributes that
+     * might have been set for VOLICON_ROOT_MAGIC_PATH, letting setxattr()
+     * through for that path is useless at best, and confusing at worst.
+     */
+
+    if ((strcmp(path, VOLICON_ROOT_MAGIC_PATH) == 0) &&
+        (strcmp(name, XATTR_FINDERINFO_NAME) == 0)) {
+        return -EACCES;
+    }
+
     return fuse_fs_setxattr(volicon_get()->next, path, name, value, size,
                             flags);
 }
@@ -331,6 +310,22 @@ volicon_getxattr(const char *path, const char *name, char *value, size_t size)
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
+    if ((strcmp(path, VOLICON_ROOT_MAGIC_PATH) == 0) &&
+        (strcmp(name, XATTR_FINDERINFO_NAME) == 0)) {
+
+        if (!size || !value) {
+            return XATTR_FINDERINFO_SIZE;
+        }
+
+        if (size < XATTR_FINDERINFO_SIZE) {
+            return -ERANGE;
+        }
+
+        memcpy(value, finder_info, XATTR_FINDERINFO_SIZE);
+
+        return XATTR_FINDERINFO_SIZE;
+    }
+
     return fuse_fs_getxattr(volicon_get()->next, path, name, value, size);
 }
 
@@ -339,6 +334,29 @@ volicon_listxattr(const char *path, char *list, size_t size)
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
+    /*
+     * XXX: Ideally, needs to return the /union/ of XATTR_FINDERINFO_NAME
+     * and any other extended attributes that might have been set for
+     * VOLICON_ROOT_MAGIC_PATH.
+     */
+
+    if ((strcmp(path, VOLICON_ROOT_MAGIC_PATH) == 0)) {
+
+        ssize_t sz = sizeof(XATTR_FINDERINFO_NAME);
+
+        if (!list) {
+            return sz;
+        }
+
+        if (size < sz) {
+            return -ERANGE;
+        }
+
+        memcpy(list, XATTR_FINDERINFO_NAME, sz);
+
+        return sz;
+    }
+
     return fuse_fs_listxattr(volicon_get()->next, path, list, size);
 }
 
@@ -346,6 +364,11 @@ static int
 volicon_removexattr(const char *path, const char *name)
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
+
+    if ((strcmp(path, VOLICON_ROOT_MAGIC_PATH) == 0) &&
+        (strcmp(name, XATTR_FINDERINFO_NAME) == 0)) {
+        return -EACCES;
+    }
 
     return fuse_fs_removexattr(volicon_get()->next, path, name);
 }
@@ -453,17 +476,6 @@ volicon_fgetattr(const char *path, struct stat *buf, struct fuse_file_info *fi)
         buf->st_size  = volicon_get()->volicon_size;
         buf->st_atime = buf->st_ctime = buf->st_mtime = time(NULL);
 
-    } else if (volicon_is_dotudot_magic_file(path)) {
-
-        memset((void *)buf, 0, sizeof(struct stat));
-
-        buf->st_mode  = S_IFREG | 0444;
-        buf->st_nlink = 1;
-        buf->st_uid   = volicon_get()->volicon_uid;
-        buf->st_gid = 0;
-        buf->st_size  = DOTUDOT_DATA_LEN;
-        buf->st_atime = buf->st_ctime = buf->st_mtime = time(NULL);
-
     } else {
         res = fuse_fs_fgetattr(volicon_get()->next, path, buf, fi);
     }
@@ -543,7 +555,7 @@ static struct fuse_operations volicon_oper = {
 static struct fuse_opt volicon_opts[] = {
     FUSE_OPT_KEY("-h", 0),
     FUSE_OPT_KEY("--help", 0),
-    { "volicon=%s", offsetof(struct volicon, volicon), 0 },
+    { "iconpath=%s", offsetof(struct volicon, volicon), 0 },
     FUSE_OPT_END
 };
 
@@ -551,7 +563,7 @@ static void
 volicon_help(void)
 {
     fprintf(stderr,
-            "    -o volicon=<icon file> display volume with custom icon\n");
+            "    -o iconpath=<icon path> display volume with custom icon\n");
 }
 
 static int
@@ -595,7 +607,7 @@ volicon_new(struct fuse_args *args, struct fuse_fs *next[])
     }
 
     if (!d->volicon) {
-        fprintf(stderr, "volicon: missing 'volicon' option\n");
+        fprintf(stderr, "volicon: missing 'iconpath' option\n");
         goto out_free;
     }
 
