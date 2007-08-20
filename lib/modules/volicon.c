@@ -552,7 +552,7 @@ static struct fuse_operations volicon_oper = {
 static struct fuse_opt volicon_opts[] = {
     FUSE_OPT_KEY("-h", 0),
     FUSE_OPT_KEY("--help", 0),
-    { "volicon=%s", offsetof(struct volicon, volicon), 0 },
+    { "iconpath=%s", offsetof(struct volicon, volicon), 0 },
     FUSE_OPT_END
 };
 
@@ -560,7 +560,7 @@ static void
 volicon_help(void)
 {
     fprintf(stderr,
-            "    -o volicon=<icon file> display volume with custom icon\n");
+            "    -o iconpath=<icon path> display volume with custom icon\n");
 }
 
 static int
@@ -619,7 +619,7 @@ volicon_new(struct fuse_args *args, struct fuse_fs *next[])
     }
 
     if (!d->volicon) {
-        fprintf(stderr, "volicon: missing 'volicon' option\n");
+        fprintf(stderr, "volicon: missing 'iconpath' option\n");
         goto out_free;
     }
 
