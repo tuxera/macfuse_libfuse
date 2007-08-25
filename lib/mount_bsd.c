@@ -218,8 +218,9 @@ enum {
 #if (__FreeBSD__ >= 10)
     ,
     KEY_DIO,
-    KEY_IGNORE,
+    KEY_IGNORED,
     KEY_QUIET,
+    KEY_VOLICON,
 #endif
 };
 
@@ -330,8 +331,8 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("novncache",           KEY_KERN),
     FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
     FUSE_OPT_KEY("quiet",               KEY_QUIET),
-    FUSE_OPT_KEY("subtype=",            KEY_KERN),
-    FUSE_OPT_KEY("volicon=",            KEY_IGNORE),
+    FUSE_OPT_KEY("subtype=",            KEY_IGNORED),
+    FUSE_OPT_KEY("volicon=",            KEY_VOLICON),
     FUSE_OPT_KEY("volname=",            KEY_KERN),
 #else
     /* Linux specific mount options, but let just the mount util handle them */
@@ -383,12 +384,30 @@ static int fuse_mount_opt_proc(void *data, const char *arg, int key,
             return -1;
         return 0;
 
-    case KEY_IGNORE:
+    case KEY_IGNORED:
         return 0;
 
     case KEY_QUIET:
         quiet_mode = 1;
         return 0;
+
+    case KEY_VOLICON:
+        {
+            char volicon_arg[MAXPATHLEN + 32];
+            char *volicon_path = strchr(arg, '=');
+            if (!volicon_path) {
+                return -1;
+            }
+            if (snprintf(volicon_arg, sizeof(volicon_arg),
+                         "-omodules=volicon,iconpath%s", volicon_path) <= 0) {
+                return -1;
+            }
+            if (fuse_opt_add_arg(outargs, volicon_arg) == -1) {
+                return -1;
+            }
+
+            return 0;
+        }
 #endif
 
     case KEY_HELP:
