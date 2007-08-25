@@ -32,9 +32,9 @@
 #include <libproc.h>
 #include <sys/utsname.h>
 
-#define FUSERMOUNT_PROG  "/System/Library/Filesystems/fusefs.fs/Support/mount_fusefs"
-#define FUSE_DEV_TRUNK   "/dev/fuse"
-#define PRIVATE_LOAD_COMMAND "/System/Library/Filesystems/fusefs.fs/Support/load_fusefs"
+#define FUSE_DEV_TRUNK "/dev/fuse"
+#define LOAD_PROG      "/Library/Filesystems/fusefs.fs/Support/load_fusefs"
+#define MOUNT_PROG     "/Library/Filesystems/fusefs.fs/Support/mount_fusefs"
 
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -109,7 +109,7 @@ loadkmod()
     pid = fork();
 
     if (pid == 0) {
-        result = execl(PRIVATE_LOAD_COMMAND, PRIVATE_LOAD_COMMAND, NULL);
+        result = execl(LOAD_PROG, LOAD_PROG, NULL);
         
         /* exec failed */
         goto Return;
@@ -203,7 +203,7 @@ out:
 }
 
 #else
-#define FUSERMOUNT_PROG         "mount_fusefs"
+#define MOUNT_PROG         "mount_fusefs"
 #define FUSE_DEV_TRUNK          "/dev/fuse"
 #endif
 
@@ -218,6 +218,7 @@ enum {
     KEY_DIO,
     KEY_IGNORED,
     KEY_QUIET,
+    KEY_VOLICON,
 #endif
 };
 
@@ -301,6 +302,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     /* Mac OS X options */
     FUSE_OPT_KEY("allow_recursion",     KEY_KERN),
     FUSE_OPT_KEY("allow_root",          KEY_KERN), /* need to pass this on */
+    FUSE_OPT_KEY("autoxattr",           KEY_KERN),
     FUSE_OPT_KEY("blocksize=",          KEY_KERN),
     FUSE_OPT_KEY("daemon_timeout=",     KEY_KERN),
     FUSE_OPT_KEY("defer_auth",          KEY_KERN),
@@ -314,23 +316,23 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("jail_symlinks",       KEY_KERN),
     FUSE_OPT_KEY("kill_on_unmount",     KEY_KERN),
     FUSE_OPT_KEY("noalerts",            KEY_KERN),
-    FUSE_OPT_KEY("noapplespecial",      KEY_KERN),
+    FUSE_OPT_KEY("noappledouble",       KEY_KERN),
+    FUSE_OPT_KEY("noapplexattr",        KEY_KERN),
     FUSE_OPT_KEY("noattrcache",         KEY_KERN),
     FUSE_OPT_KEY("noauthopaque",        KEY_KERN),
     FUSE_OPT_KEY("noauthopaqueaccess",  KEY_KERN),
-    FUSE_OPT_KEY("noautoextattr",       KEY_KERN),
     FUSE_OPT_KEY("nobrowse",            KEY_KERN),
     FUSE_OPT_KEY("nolocalcaches",       KEY_KERN),
-    FUSE_OPT_KEY("noping_diskarb",      KEY_KERN),
+    FUSE_OPT_KEY("noping_diskarb",      KEY_IGNORED),
     FUSE_OPT_KEY("noreadahead",         KEY_KERN),
     FUSE_OPT_KEY("nosynconclose",       KEY_KERN),
     FUSE_OPT_KEY("nosyncwrites",        KEY_KERN),
     FUSE_OPT_KEY("noubc",               KEY_KERN),
     FUSE_OPT_KEY("novncache",           KEY_KERN),
-    FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
+    FUSE_OPT_KEY("ping_diskarb",        KEY_IGNORED),
     FUSE_OPT_KEY("quiet",               KEY_QUIET),
-    FUSE_OPT_KEY("subtype=",            KEY_KERN),
-    FUSE_OPT_KEY("volicon=",            KEY_IGNORED),
+    FUSE_OPT_KEY("subtype=",            KEY_IGNORED),
+    FUSE_OPT_KEY("volicon=",            KEY_VOLICON),
     FUSE_OPT_KEY("volname=",            KEY_KERN),
 #else
     /* Linux specific mount options, but let just the mount util handle them */
@@ -347,13 +349,13 @@ static void mount_help(void)
     fprintf(stderr,
             "    -o allow_root          allow access to root\n"
             );
-    system(FUSERMOUNT_PROG " --help");
+    system(MOUNT_PROG " --help");
     fputc('\n', stderr);
 }
 
 static void mount_version(void)
 {
-    system(FUSERMOUNT_PROG " --version");
+    system(MOUNT_PROG " --version");
 }
 
 static int fuse_mount_opt_proc(void *data, const char *arg, int key,
@@ -388,6 +390,24 @@ static int fuse_mount_opt_proc(void *data, const char *arg, int key,
     case KEY_QUIET:
         quiet_mode = 1;
         return 0;
+
+    case KEY_VOLICON:
+        {
+            char volicon_arg[MAXPATHLEN + 32];
+            char *volicon_path = strchr(arg, '=');
+            if (!volicon_path) {
+                return -1;
+            }
+            if (snprintf(volicon_arg, sizeof(volicon_arg), 
+                         "-omodules=volicon,iconpath%s", volicon_path) <= 0) {
+                return -1;
+            }
+            if (fuse_opt_add_arg(outargs, volicon_arg) == -1) {
+                return -1;
+            }
+
+            return 0;
+        }
 #endif
 
     case KEY_HELP:
@@ -501,7 +521,7 @@ static int init_backgrounded(void)
     len = sizeof(ibg);
 
 #if (__FreeBSD__ >= 10)
-    if (sysctlbyname("macfuse.tunables.init_backgrounded", &ibg, (size_t *)&len, NULL, 0))
+    /* Previously: macfuse.tunables.init_backgrounded */
         return 0;
 #else
     if (sysctlbyname("vfs.fuse.init_backgrounded", &ibg, &len, NULL, 0))
@@ -514,7 +534,7 @@ static int init_backgrounded(void)
 
 static int fuse_mount_core(const char *mountpoint, const char *opts)
 {
-    const char *mountprog = FUSERMOUNT_PROG;
+    const char *mountprog = MOUNT_PROG;
     int fd;
     char *fdnam, *dev;
     int pid;
