@@ -1,6 +1,7 @@
 /*
  *  Custom volume icon support for MacFUSE.
  *
+ *  - xattr'ification and overhaul by Amit Singh <singh@>
  *  - Made into a libfuse stack module by Andrew de los Reyes <adlr@google>
  *  - Original "volicon" code by Amit Singh <singh@>
  *
@@ -24,14 +25,29 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <arpa/inet.h>
 
 #define VOLICON_ROOT_MAGIC_PATH    "/"
 #define VOLICON_ICON_MAGIC_PATH    "/.VolumeIcon.icns"
 #define VOLICON_ICON_MAXSIZE       (1024 * 1024)
 
+struct FndrGenericInfo {
+    u_int32_t   ignored0;
+    u_int32_t   ignored1;
+    u_int16_t   flags;
+    struct {
+        int16_t ignored2;
+        int16_t ignored3;
+    } fdLocation;
+    int16_t     ignored4;
+} __attribute__((aligned(2), packed));
+typedef struct FndrGenericInfo FndrGenericInfo;
+
+#define kHasCustomIcon 0x0400
+
 static const char finder_info[32] = {
     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-    0x4, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 };
@@ -289,16 +305,16 @@ volicon_setxattr(const char *path, const char *name, const char *value,
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
-    /*
-     * XXX: Until listxattr() is changed to return the /union/ of
-     * XATTR_FINDERINFO_NAME and any other extended attributes that
-     * might have been set for VOLICON_ROOT_MAGIC_PATH, letting setxattr()
-     * through for that path is useless at best, and confusing at worst.
-     */
-
     if ((strcmp(path, VOLICON_ROOT_MAGIC_PATH) == 0) &&
         (strcmp(name, XATTR_FINDERINFO_NAME) == 0)) {
-        return -EACCES;
+        if ((size >= 8) && (size <= XATTR_FINDERINFO_SIZE)) {
+            char finder_info[XATTR_FINDERINFO_SIZE];
+            memcpy(finder_info, value, size);
+            ((struct FndrGenericInfo *)&finder_info)->flags |= ntohs(0x0400);
+            //finder_info[8] |= 0x100;
+            return fuse_fs_setxattr(volicon_get()->next, path, name,
+                                    finder_info, size, flags);
+        }
     }
 
     return fuse_fs_setxattr(volicon_get()->next, path, name, value, size,
@@ -313,6 +329,8 @@ volicon_getxattr(const char *path, const char *name, char *value, size_t size)
     if ((strcmp(path, VOLICON_ROOT_MAGIC_PATH) == 0) &&
         (strcmp(name, XATTR_FINDERINFO_NAME) == 0)) {
 
+        ssize_t res;
+
         if (!size || !value) {
             return XATTR_FINDERINFO_SIZE;
         }
@@ -321,7 +339,13 @@ volicon_getxattr(const char *path, const char *name, char *value, size_t size)
             return -ERANGE;
         }
 
-        memcpy(value, finder_info, XATTR_FINDERINFO_SIZE);
+        res = fuse_fs_getxattr(volicon_get()->next, path, name, value, size);
+
+        if (res != XATTR_FINDERINFO_SIZE) {
+            memcpy(value, finder_info, XATTR_FINDERINFO_SIZE);
+        }
+
+        ((struct FndrGenericInfo *)value)->flags |= ntohs(0x0400);
 
         return XATTR_FINDERINFO_SIZE;
     }
@@ -334,27 +358,50 @@ volicon_listxattr(const char *path, char *list, size_t size)
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
-    /*
-     * XXX: Ideally, needs to return the /union/ of XATTR_FINDERINFO_NAME
-     * and any other extended attributes that might have been set for
-     * VOLICON_ROOT_MAGIC_PATH.
-     */
-
     if ((strcmp(path, VOLICON_ROOT_MAGIC_PATH) == 0)) {
-
+        int done = 0;
         ssize_t sz = sizeof(XATTR_FINDERINFO_NAME);
+        ssize_t res = fuse_fs_listxattr(volicon_get()->next, path, list, size);
 
-        if (!list) {
+        if (!list) { /* size being queried */
+            if (res > 0) {
+                sz += res;
+            }
             return sz;
         }
 
-        if (size < sz) {
+        /* list is good */
+
+        if (res == -ERANGE) {
             return -ERANGE;
         }
 
-        memcpy(list, XATTR_FINDERINFO_NAME, sz);
+        if (res > 0) {
+            size_t len = 0;
+            char *curr = list;
+            do {
+                size_t thislen = strlen(curr) + 1;
+                if (strcmp(curr, XATTR_FINDERINFO_NAME) == 0) {
+                    done = 1;
+                    break;
+                }
+                curr += thislen;
+                len += thislen;
+            } while (len < res);
+        }
 
-        return sz;
+        if (done) {
+            return res;
+        }
+
+        if (size < (res + sizeof(XATTR_FINDERINFO_NAME))) {
+            return -ERANGE;
+        }
+
+        memcpy((char *)list + res, XATTR_FINDERINFO_NAME,
+               sizeof(XATTR_FINDERINFO_NAME));
+
+        return (res + sizeof(XATTR_FINDERINFO_NAME));
     }
 
     return fuse_fs_listxattr(volicon_get()->next, path, list, size);
@@ -438,7 +485,7 @@ volicon_access(const char *path, int mask)
             return -EACCES;
         }
 
-        return 1;
+        return 0;
     }
 
     return fuse_fs_access(volicon_get()->next, path, mask);

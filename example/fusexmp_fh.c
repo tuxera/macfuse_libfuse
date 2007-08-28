@@ -29,6 +29,17 @@
 #include <sys/xattr.h>
 #endif
 
+#include <sys/param.h>
+
+#if (__FreeBSD__ >= 10)
+
+#include <sys/kauth.h>
+
+#define G_KAUTH_FILESEC_ATTR "org.apple.system.Security"
+
+#endif
+
+
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
     int res;
@@ -394,7 +405,35 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
                         size_t size, int flags)
 {
 #if (__FreeBSD__ >= 10)
-    int res = setxattr(path, name, value, size, 0, flags);
+    int res;
+    flags &= ~XATTR_NOSECURITY;
+    if (strcmp(name, KAUTH_FILESEC_XATTR) == 0) {
+
+    if (strcmp(name, XATTR_RESOURCEFORK_NAME
+    if ((memcmp(name, COM_APPLE_, SIZ_APPLE_) == 0) &&
+         strcmp(name, XATTR_RESOURCEFORK_NAME)) {
+        char new_name[MAXPATHLEN];
+        snprintf(new_name, MAXPATHLEN, "%s%s", COM_GOOGL_, name + SIZ_APPLE_);
+        flags &= ~(XATTR_NOSECURITY);
+        res = setxattr(path, new_name, value, size, 0, flags);
+        if (!strcmp(name, "com.apple.system.Security")) {
+            fprintf(stderr, "%d = setxattr(%s, %s, %hhx %hhx ...)\n",
+                    res, path, new_name, value[size - 1], value[size - 2]);
+#if 0
+            if (((unsigned char)value[size - 1] == 0xb6) && ((unsigned char)value[size - 2] == 0x1f)) {
+                fprintf(stderr, "waiting\n");
+                sleep(60);
+            }
+#endif
+        } else {
+            fprintf(stderr, "%d = setxattr(%s, %s, ..., %d, %x)\n",
+                    res, path, new_name, size, flags);
+        }
+    } else {
+        res = setxattr(path, name, value, size, 0, flags);
+        fprintf(stderr, "%d (%d) = setxattr(%s, %s, ..., %d, %x)\n",
+                res, errno, path, name, size, flags);
+    }
 #else
     int res = lsetxattr(path, name, value, size, flags);
 #endif
@@ -407,7 +446,26 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
                     size_t size)
 {
 #if (__FreeBSD__ >= 10)
-    int res = getxattr(path, name, value, size, 0, 0);
+    int res;
+    if ((memcmp(name, COM_APPLE_, SIZ_APPLE_) == 0) && strcmp(name, XATTR_RESOURCEFORK_NAME)) {
+        char new_name[MAXPATHLEN];
+        snprintf(new_name, MAXPATHLEN, "%s%s", COM_GOOGL_, name + SIZ_APPLE_);
+        res = getxattr(path, new_name, value, size, 0, 0);
+#if 0
+        if (!strcmp(name, "com.apple.system.Security")) {
+            if ((res > 0) && value) {
+                fprintf(stderr, "%d = getxattr(%s, %s, %hhx %hhx ...)\n",
+                        res, path, new_name, value[size - 1], value[size - 2]);
+            }
+        } else {
+            fprintf(stderr, "%d = getxattr(%s, %s, ...)\n",
+                    res, path, new_name);
+        }
+#endif
+    } else {
+        res = getxattr(path, name, value, size, 0, 0);
+        fprintf(stderr, "%d (%d) = getxattr(%s, %s, ...)\n", res, errno, path, name);
+    }
 #else
     int res = lgetxattr(path, name, value, size);
 #endif
@@ -420,6 +478,23 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 {
 #if (__FreeBSD__ >= 10)
     int res = listxattr(path, list, size, 0);
+    if (res > 0 && list) {
+        size_t len = 0;
+        char *curr = list;
+        do { 
+            size_t thislen = strlen(curr) + 1;
+            if (memcmp(curr, XATTR_GSEC_, sizeof(XATTR_GSEC_)) == 0) {
+                memmove(curr, curr + thislen, res - len - thislen);
+                res -= thislen;
+                continue;
+            }
+            if ((memcmp(curr, COM_GOOGL_, SIZ_APPLE_) == 0) && strcmp(curr, XATTR_RESOURCEFORK_NAME)) {
+                memcpy(curr, COM_APPLE_, SIZ_APPLE_);
+            }
+            curr += thislen;
+            len += thislen;
+        } while (len < res);
+    }
 #else
     int res = llistxattr(path, list, size);
 #endif
@@ -431,7 +506,15 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 static int xmp_removexattr(const char *path, const char *name)
 {
 #if (__FreeBSD__ >= 10)
-    int res = removexattr(path, name, 0);
+    int res;
+    if ((memcmp(name, COM_APPLE_, SIZ_APPLE_) == 0) && strcmp(name, XATTR_RESOURCEFORK_NAME)) {
+        char new_name[MAXPATHLEN];
+        snprintf(new_name, MAXPATHLEN, "%s%s", COM_GOOGL_, name + SIZ_APPLE_);
+        res = removexattr(path, new_name, 0);
+        fprintf(stderr, "%d = removexattr(%s, %s, ...)\n", res, path, new_name);
+    } else {
+        res = removexattr(path, name, 0);
+    }
 #else
     int res = lremovexattr(path, name);
 #endif
