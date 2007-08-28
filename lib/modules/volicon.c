@@ -435,7 +435,7 @@ volicon_access(const char *path, int mask)
             return -EACCES;
         }
 
-        return 1;
+        return 0;
     }
 
     return fuse_fs_access(volicon_get()->next, path, mask);
