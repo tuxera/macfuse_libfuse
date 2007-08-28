@@ -437,7 +437,6 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
         memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
         memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
         res = getxattr(path, new_name, value, size, 0, 0);
-fprintf(stderr, "%d = %s, %s\n", res, name, new_name);
     } else {
         res = getxattr(path, name, value, size, 0, 0);
     }
