@@ -76,18 +76,14 @@ static int fuse_kern_chan_send(struct fuse_chan *ch, const struct iovec iov[],
 }
 
 #if (__FreeBSD__ >= 10)
-
-#include <sys/ioctl.h>
-
-/* should include <common/fuse_ioctl.h> for this */
-#define FUSEDEVIOCDAEMONISDYING       _IOW('F', 3,  u_int32_t)
+#include "macfuse.h"
 #endif
 
 static void fuse_kern_chan_destroy(struct fuse_chan *ch)
 {
 #if (__FreeBSD__ >= 10)
     int fd = fuse_chan_fd(ch);
-    (void)ioctl(fd, FUSEDEVIOCDAEMONISDYING, &fd);
+    (void)ioctl(fd, FUSEDEVIOCSETDAEMONDEAD, &fd);
     close(fd);
 #else
     close(fuse_chan_fd(ch));
