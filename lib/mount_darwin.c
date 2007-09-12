@@ -274,7 +274,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     /* Mac OS X options */
     FUSE_OPT_KEY("allow_recursion",     KEY_KERN),
     FUSE_OPT_KEY("allow_root",          KEY_KERN), /* need to pass this on */
-    FUSE_OPT_KEY("autoxattr",           KEY_KERN),
+    FUSE_OPT_KEY("auto_xattr",          KEY_KERN),
     FUSE_OPT_KEY("blocksize=",          KEY_KERN),
     FUSE_OPT_KEY("daemon_timeout=",     KEY_KERN),
     FUSE_OPT_KEY("default_permissions", KEY_KERN),
