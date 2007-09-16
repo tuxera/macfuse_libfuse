@@ -8,10 +8,6 @@
 
 #include <AvailabilityMacros.h>
 
-#ifdef MAC_OS_X_VERSION_10_5
-
-/* 10.5+ */
-
 /* Half-baked makeshift implementation (cancelable). */
 
 #include <errno.h>
@@ -145,19 +141,5 @@ fuse_sem_post(fuse_sem_t *sem)
 #define sem_destroy(s)    fuse_sem_destroy(s)
 #define sem_post(s)       fuse_sem_post(s)
 #define sem_wait(s)       fuse_sem_wait(s)
-
-#else
-
-/* 10.4- */
-
-#include <mach/mach.h>
-
-#define sem_init(s, a, b) semaphore_create(mach_task_self(), (s), \
-                                           SYNC_POLICY_FIFO, 0)
-#define sem_destroy(s)    semaphore_destroy(mach_task_self(), (semaphore_t)*(s))
-#define sem_post(s)       semaphore_signal((semaphore_t)*(s))
-#define sem_wait(s)       semaphore_wait((semaphore_t)*(s))
-
-#endif /* MAC_OS_X_VERSION_10.5 */
 
 #endif /* _DARWIN_COMPAT_H_ */
