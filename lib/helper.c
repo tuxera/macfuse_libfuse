@@ -11,6 +11,9 @@
 #include "fuse_opt.h"
 #include "fuse_lowlevel.h"
 #include "fuse_common_compat.h"
+#if (__FreeBSD__ >= 10)
+#include "macfuse.h"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,7 +83,12 @@ static void helper_help(void)
 
 static void helper_version(void)
 {
+#if (__FreeBSD__ >= 10)
+    fprintf(stderr, "MacFUSE library version: FUSE %s / MacFUSE %s\n",
+            PACKAGE_VERSION, MACFUSE_VERSION);
+#else
     fprintf(stderr, "FUSE library version: %s\n", PACKAGE_VERSION);
+#endif
 }
 
 static int fuse_helper_opt_proc(void *data, const char *arg, int key,

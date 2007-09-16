@@ -38,7 +38,6 @@
 
 #include "macfuse.h"
 
-static const char *MacFUSE = "MacFUSE version " MACFUSE_VERSION ", " __DATE__ ", " __TIME__;
 static int quiet_mode = 0;
 
 static long

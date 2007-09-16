@@ -13,6 +13,9 @@
 #include "fuse_misc.h"
 #include "fuse_common_compat.h"
 #include "fuse_lowlevel_compat.h"
+#if (__FreeBSD__ >= 10)
+#include "macfuse.h"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1197,8 +1200,13 @@ static struct fuse_opt fuse_ll_opts[] = {
 
 static void fuse_ll_version(void)
 {
+#if (__FreeBSD__ >= 10)
+    fprintf(stderr, "MacFUSE kernel interface version %i.%i\n",
+            FUSE_KERNEL_VERSION, FUSE_KERNEL_MINOR_VERSION);
+#else
     fprintf(stderr, "using FUSE kernel interface version %i.%i\n",
             FUSE_KERNEL_VERSION, FUSE_KERNEL_MINOR_VERSION);
+#endif
 }
 
 static void fuse_ll_help(void)
