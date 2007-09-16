@@ -572,7 +572,7 @@ mount:
                 }
             }
             execvp(mountprog, (char **) argv);
-            perror("MacFUSE: failed to exec mount_fusefs program");
+            perror("MacFUSE: failed to exec mount program");
             exit(1);
         }
 
