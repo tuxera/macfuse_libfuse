@@ -38,7 +38,7 @@
 
 #include "macfuse.h"
 
-static const char *MacFUSE = "MacFUSE version 0.5.0, " __DATE__ ", " __TIME__;
+static const char *MacFUSE = "MacFUSE version " MACFUSE_VERSION ", " __DATE__ ", " __TIME__;
 static int quiet_mode = 0;
 
 static long
@@ -90,7 +90,7 @@ loadkmod(void)
     pid = fork();
 
     if (pid == 0) {
-        result = execl(LOAD_PROG, LOAD_PROG, NULL);
+        result = execl(MACFUSE_LOAD_PROG, MACFUSE_LOAD_PROG, NULL);
         
         /* exec failed */
         goto Return;
@@ -311,14 +311,14 @@ static const struct fuse_opt fuse_mount_opts[] = {
 static void
 mount_help(void)
 {
-    system(MOUNT_PROG " --help");
+    system(MACFUSE_MOUNT_PROG " --help");
     fputc('\n', stderr);
 }
 
 static void
 mount_version(void)
 {
-    system(MOUNT_PROG " --version");
+    system(MACFUSE_MOUNT_PROG " --version");
 }
 
 static int
@@ -408,7 +408,8 @@ fuse_kern_unmount(const char *mountpoint, int fd)
 
     devname_r(sbuf.st_rdev, S_IFCHR, dev, 128);
 
-    if (strncmp(dev, "fuse", 4)) {
+    if (strncmp(dev, MACFUSE_DEVICE_BASENAME,
+                sizeof(MACFUSE_DEVICE_BASENAME) - 1)) {
         return;
     }
 
@@ -431,7 +432,7 @@ fuse_mount_core(const char *mountpoint, const char *opts)
     int fd, pid;
     int result;
     char *fdnam, *dev;
-    const char *mountprog = MOUNT_PROG;
+    const char *mountprog = MACFUSE_MOUNT_PROG;
 
     if (!mountpoint) {
         fprintf(stderr, "missing or invalid mount point\n");
@@ -472,7 +473,7 @@ fuse_mount_core(const char *mountpoint, const char *opts)
             post_notification(LIBFUSE_UNOTIFICATIONS_NOTIFY_VERSIONMISMATCH,
                               NULL, NULL, 0);
         }
-        fprintf(stderr, "fusefs file system is not available (%d)\n",
+        fprintf(stderr, "the MacFUSE file system is not available (%d)\n",
                 result);
         return -1;
     }
@@ -500,15 +501,16 @@ fuse_mount_core(const char *mountpoint, const char *opts)
 
     if (dev) {
         if ((fd = open(dev, O_RDWR)) < 0) {
-            perror("fuse: failed to open fuse device");
+            perror("MacFUSE: failed to open device");
             return -1;
         }
     } else {
         int r, devidx = -1;
         char devpath[MAXPATHLEN];
 
-        for (r = 0; r < NFUSEDEVICE; r++) {
-            snprintf(devpath, MAXPATHLEN - 1, "/dev/fuse%d", r);
+        for (r = 0; r < MACFUSE_NDEVICES; r++) {
+            snprintf(devpath, MAXPATHLEN - 1,
+                     _PATH_DEV MACFUSE_DEVICE_BASENAME "%d", r);
             fd = open(devpath, O_RDWR);
             if (fd >= 0) {
                 dev = devpath;
@@ -517,7 +519,7 @@ fuse_mount_core(const char *mountpoint, const char *opts)
             }
         }
         if (devidx == -1) {
-            perror("fuse: failed to open fuse device");
+            perror("MacFUSE: failed to open device");
             return -1;
         }
     }
@@ -531,7 +533,7 @@ mount:
     pid = fork();
 
     if (pid == -1) {
-        perror("fuse: fork() failed");
+        perror("MacFUSE: fork() failed");
         close(fd);
         return -1;
     }
@@ -540,7 +542,7 @@ mount:
 
         pid = fork();
         if (pid == -1) {
-            perror("fuse: fork() failed");
+            perror("MacFUSE: fork() failed");
             close(fd);
             exit(1);
         }
@@ -570,7 +572,7 @@ mount:
                 }
             }
             execvp(mountprog, (char **) argv);
-            perror("fuse: failed to exec mount program");
+            perror("MacFUSE: failed to exec mount_fusefs program");
             exit(1);
         }
 
