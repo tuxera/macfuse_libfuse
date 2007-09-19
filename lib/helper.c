@@ -11,6 +11,9 @@
 #include "fuse_opt.h"
 #include "fuse_lowlevel.h"
 #include "fuse_common_compat.h"
+#if (__FreeBSD__ >= 10)
+#include "macfuse.h"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,7 +83,12 @@ static void helper_help(void)
 
 static void helper_version(void)
 {
+#if (__FreeBSD__ >= 10)
+    fprintf(stderr, "MacFUSE library version: FUSE %s / MacFUSE %s\n",
+            PACKAGE_VERSION, MACFUSE_VERSION);
+#else
     fprintf(stderr, "FUSE library version: %s\n", PACKAGE_VERSION);
+#endif
 }
 
 static int fuse_helper_opt_proc(void *data, const char *arg, int key,
@@ -108,6 +116,19 @@ static int fuse_helper_opt_proc(void *data, const char *arg, int key,
                 fprintf(stderr, "fuse: bad mount point `%s': %s\n", arg, strerror(errno));
                 return -1;
             }
+#if (__FreeBSD__ >= 10)
+            else {
+                struct stat sb;
+                if (stat(mountpoint, &sb) != 0) {
+                    fprintf(stderr, "fuse: failed to stat mount point `%s': %s\n", mountpoint, strerror(errno));
+                    return -1;
+                }
+                if ((sb.st_mode & S_IFMT) != S_IFDIR) {
+                    fprintf(stderr, "fuse: mount point is not a directory `%s'\n", mountpoint);
+                    return -1;
+                }
+            }
+#endif
             return fuse_opt_add_opt(&hopts->mountpoint, mountpoint);
         } else {
             fprintf(stderr, "fuse: invalid argument `%s'\n", arg);
@@ -190,7 +211,19 @@ static struct fuse_chan *fuse_mount_common(const char *mountpoint,
                                            struct fuse_args *args)
 {
     struct fuse_chan *ch;
-    int fd = fuse_mount_compat25(mountpoint, args);
+    int fd;
+
+    /*
+     * Make sure file descriptors 0, 1 and 2 are open, otherwise chaos
+     * would ensue.
+     */
+    do {
+        fd = open("/dev/null", O_RDWR);
+        if (fd > 2)
+            close(fd);
+    } while (fd >= 0 && fd <= 2);
+
+    fd = fuse_mount_compat25(mountpoint, args);
     if (fd == -1)
         return NULL;
 
@@ -220,14 +253,14 @@ void fuse_unmount(const char *mountpoint, struct fuse_chan *ch)
 
 #if (__FreeBSD__ >= 10)
 #include <sys/param.h>
-
+    
 static char recorded_mountpoint[MAXPATHLEN] = { 0 };
-
+    
 const char *
 fuse_get_mountpoint(void)
 {
     return &(recorded_mountpoint[0]);
-}
+}   
 #endif
 
 static struct fuse *fuse_setup_common(int argc, char *argv[],

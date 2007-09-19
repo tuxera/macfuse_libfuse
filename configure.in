@@ -16,6 +16,7 @@ fi
 case $target_os in
      *linux*)	arch=linux;;
      *bsd*)	arch=bsd;;
+     *darwin*)	arch=darwin;;
      *)		arch=unknown;;
 esac
 
@@ -62,7 +63,9 @@ AC_CHECK_FUNCS([fork setxattr fdatasync])
 AC_CHECK_MEMBERS([struct stat.st_atim])
 AC_CHECK_MEMBERS([struct stat.st_atimespec])
 
+if test "$arch" != darwin; then
 libfuse_libs="-pthread"
+fi
 LIBS=
 AC_SEARCH_LIBS(dlopen, [dl])
 AC_SEARCH_LIBS(clock_gettime, [rt])
@@ -97,6 +100,7 @@ AC_SUBST(subdirs2)
 
 AM_CONDITIONAL(LINUX, test "$arch" = linux)
 AM_CONDITIONAL(BSD, test "$arch" = bsd)
+AM_CONDITIONAL(DARWIN, test "$arch" = darwin)
 
 AC_CONFIG_FILES([fuse.pc Makefile lib/Makefile util/Makefile example/Makefile include/Makefile])
 AC_OUTPUT

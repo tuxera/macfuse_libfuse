@@ -6,12 +6,6 @@
     See the file COPYING.LIB.
 */
 
-#if (__FreeBSD__ >= 10)
-#undef _POSIX_C_SOURCE
-#include <sys/types.h>
-#include <CoreFoundation/CoreFoundation.h>
-#endif
-
 #include "fuse_i.h"
 #include "fuse_opt.h"
 
@@ -27,187 +21,8 @@
 #include <string.h>
 #include <paths.h>
 
-#if (__FreeBSD__ >= 10)
-
-#include <sys/utsname.h>
-
-#define FUSERMOUNT_PROG  "/System/Library/Filesystems/fusefs.fs/Support/mount_fusefs"
-#define FUSE_DEV_TRUNK   "/dev/fuse"
-#define PRIVATE_LOAD_COMMAND "/System/Library/Filesystems/fusefs.fs/Support/load_fusefs"
-
-#include <sys/param.h>
-#include <sys/mount.h>
-#include <AssertMacros.h>
-
-static const char *MacFUSE = "MacFUSE version 0.5.0, " __DATE__ ", " __TIME__;
-static int quiet_mode = 0;
-
-static long
-os_version_major(void)
-{
-    int ret = 0;
-    long major = 0;
-    char *c = NULL;
-    struct utsname u;
-    size_t oldlen;
-    int mib[2];
-
-    oldlen = sizeof(u.release);
-
-    mib[0] = CTL_KERN;
-    mib[1] = KERN_OSRELEASE;
-    ret = sysctl(mib, 2, u.release, &oldlen, NULL, 0);
-    if (ret != 0) {
-        return -1;
-    }
-
-    c = strchr(u.release, '.');
-    if (c == NULL) {
-        return -1;
-    }
-
-    *c = '\0';
-
-    errno = 0;
-    major = strtol(u.release, NULL, 10);
-    if ((errno == EINVAL) || (errno == ERANGE)) {
-        return -1;
-    }
-
-    return major;
-}
-
-__unused static int
-checkloadable_unused(void)
-{
-    int ret;
-    struct vfsconf vfc;
-    
-    ret = getvfsbyname("fusefs", &vfc);
-    
-    return ret;
-}   
-
-static int
-checkloadable(void)
-{
-    return 1; /* load_fusefs will take care of checking */
-}
-
-int
-loadkmod()
-{
-    int result = -1;
-    int pid, terminated_pid;
-    union wait status;
-    long major;
-
-    major = os_version_major();
-
-    if (major != 8) { /* not Mac OS X 10.4.x */
-        return EINVAL;
-    }
-
-    pid = fork();
-
-    if (pid == 0) {
-        result = execl(PRIVATE_LOAD_COMMAND, PRIVATE_LOAD_COMMAND, NULL);
-        
-        /* exec failed */
-        goto Return;
-    }
-
-    require_action(pid != -1, Return, result = errno);
-
-    while ((terminated_pid = wait4(pid, (int *)&status, 0, NULL)) < 0) {
-        /* retry if EINTR, else break out with error */
-        if (errno != EINTR) {
-            break;
-        }
-    }
-
-    if ((terminated_pid == pid) && (WIFEXITED(status))) {
-        result = WEXITSTATUS(status);
-    } else {
-        result = -1;
-    }
-
-Return:
-    check_noerr_string(result, strerror(errno));
-    
-    return result;
-}
-
-static int
-post_notification(char   *name,
-                  char   *udata_keys[],
-                  char   *udata_values[],
-                  CFIndex nf_num)
-{
-    CFIndex i;
-    CFStringRef nf_name   = NULL;
-    CFStringRef nf_object = NULL;
-    CFMutableDictionaryRef nf_udata  = NULL;
-
-    CFNotificationCenterRef distributedCenter;
-    CFStringEncoding encoding = kCFStringEncodingASCII;
-
-    distributedCenter = CFNotificationCenterGetDistributedCenter();
-
-    if (!distributedCenter) {
-        return -1;
-    }
-
-    nf_name = CFStringCreateWithCString(kCFAllocatorDefault, name, encoding);
-      
-    nf_object = CFStringCreateWithCString(kCFAllocatorDefault,
-                                          LIBFUSE_UNOTIFICATIONS_OBJECT,
-                                          encoding);
- 
-    nf_udata = CFDictionaryCreateMutable(kCFAllocatorDefault,
-                                         nf_num,
-                                         &kCFCopyStringDictionaryKeyCallBacks,
-                                         &kCFTypeDictionaryValueCallBacks);
-
-    if (!nf_name || !nf_object || !nf_udata) {
-        goto out;
-    }
-
-    for (i = 0; i < nf_num; i++) {
-        CFStringRef a_key = CFStringCreateWithCString(kCFAllocatorDefault,
-                                                      udata_keys[i],
-                                                      kCFStringEncodingASCII);
-        CFStringRef a_value = CFStringCreateWithCString(kCFAllocatorDefault,
-                                                        udata_values[i],
-                                                        kCFStringEncodingASCII);
-        CFDictionarySetValue(nf_udata, a_key, a_value);
-        CFRelease(a_key);
-        CFRelease(a_value);
-    }
-
-    CFNotificationCenterPostNotification(distributedCenter,
-                                         nf_name, nf_object, nf_udata, false);
-
-out:
-    if (nf_name) {
-        CFRelease(nf_name);
-    }
-
-    if (nf_object) {
-        CFRelease(nf_object);
-    }
-
-    if (nf_udata) {
-        CFRelease(nf_udata);
-    }
-
-    return 0;
-}
-
-#else
 #define FUSERMOUNT_PROG         "mount_fusefs"
 #define FUSE_DEV_TRUNK          "/dev/fuse"
-#endif
 
 enum {
     KEY_ALLOW_ROOT,
@@ -215,13 +30,6 @@ enum {
     KEY_HELP,
     KEY_VERSION,
     KEY_KERN
-#if (__FreeBSD__ >= 10)
-    ,
-    KEY_DIO,
-    KEY_IGNORED,
-    KEY_QUIET,
-    KEY_VOLICON,
-#endif
 };
 
 struct mount_opts {
@@ -300,47 +108,11 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("noprivate",           KEY_KERN),
     FUSE_OPT_KEY("noneglect_shares",    KEY_KERN),
     FUSE_OPT_KEY("nopush_symlinks_in",  KEY_KERN),
-#if (__FreeBSD__ >= 10)
-    /* Mac OS X options */
-    FUSE_OPT_KEY("allow_recursion",     KEY_KERN),
-    FUSE_OPT_KEY("allow_root",          KEY_KERN), /* need to pass this on */
-    FUSE_OPT_KEY("blocksize=",          KEY_KERN),
-    FUSE_OPT_KEY("daemon_timeout=",     KEY_KERN),
-    FUSE_OPT_KEY("defer_auth",          KEY_KERN),
-    FUSE_OPT_KEY("direct_io",           KEY_DIO),
-    FUSE_OPT_KEY("extended_security",   KEY_KERN),
-    FUSE_OPT_KEY("fsid=",               KEY_KERN),
-    FUSE_OPT_KEY("fsname=",             KEY_KERN),
-    FUSE_OPT_KEY("fssubtype=",          KEY_KERN),
-    FUSE_OPT_KEY("init_timeout=",       KEY_KERN),
-    FUSE_OPT_KEY("iosize=",             KEY_KERN),
-    FUSE_OPT_KEY("jail_symlinks",       KEY_KERN),
-    FUSE_OPT_KEY("kill_on_unmount",     KEY_KERN),
-    FUSE_OPT_KEY("noalerts",            KEY_KERN),
-    FUSE_OPT_KEY("noapplespecial",      KEY_KERN),
-    FUSE_OPT_KEY("noattrcache",         KEY_KERN),
-    FUSE_OPT_KEY("noauthopaque",        KEY_KERN),
-    FUSE_OPT_KEY("noauthopaqueaccess",  KEY_KERN),
-    FUSE_OPT_KEY("nobrowse",            KEY_KERN),
-    FUSE_OPT_KEY("nolocalcaches",       KEY_KERN),
-    FUSE_OPT_KEY("noping_diskarb",      KEY_KERN),
-    FUSE_OPT_KEY("noreadahead",         KEY_KERN),
-    FUSE_OPT_KEY("nosynconclose",       KEY_KERN),
-    FUSE_OPT_KEY("nosyncwrites",        KEY_KERN),
-    FUSE_OPT_KEY("noubc",               KEY_KERN),
-    FUSE_OPT_KEY("novncache",           KEY_KERN),
-    FUSE_OPT_KEY("ping_diskarb",        KEY_KERN),
-    FUSE_OPT_KEY("quiet",               KEY_QUIET),
-    FUSE_OPT_KEY("subtype=",            KEY_IGNORED),
-    FUSE_OPT_KEY("volicon=",            KEY_VOLICON),
-    FUSE_OPT_KEY("volname=",            KEY_KERN),
-#else
     /* Linux specific mount options, but let just the mount util handle them */
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
     FUSE_OPT_KEY("nonempty",            KEY_KERN),
     FUSE_OPT_KEY("large_read",          KEY_KERN),
     FUSE_OPT_KEY("max_read=",           KEY_KERN),
-#endif
     FUSE_OPT_END
 };
 
@@ -376,39 +148,6 @@ static int fuse_mount_opt_proc(void *data, const char *arg, int key,
 
     case KEY_KERN:
         return fuse_opt_add_opt(&mo->kernel_opts, arg);
-
-#if (__FreeBSD__ >= 10)
-    case KEY_DIO:
-          if (fuse_opt_add_opt(&mo->kernel_opts, "direct_io") == -1 ||
-              (fuse_opt_add_arg(outargs, "-odirect_io") == -1))
-            return -1;
-        return 0;
-
-    case KEY_IGNORED:
-        return 0;
-
-    case KEY_QUIET:
-        quiet_mode = 1;
-        return 0;
-
-    case KEY_VOLICON:
-        {
-            char volicon_arg[MAXPATHLEN + 32];
-            char *volicon_path = strchr(arg, '=');
-            if (!volicon_path) {
-                return -1;
-            }
-            if (snprintf(volicon_arg, sizeof(volicon_arg),
-                         "-omodules=volicon,iconpath%s", volicon_path) <= 0) {
-                return -1;
-            }
-            if (fuse_opt_add_arg(outargs, volicon_arg) == -1) {
-                return -1;
-            }
-
-            return 0;
-        }
-#endif
 
     case KEY_HELP:
         mount_help();
@@ -460,21 +199,8 @@ void fuse_unmount_compat22(const char *mountpoint)
     if (rv)
         return;
 
-#if (__FreeBSD__ >= 10)
-    {
-        int ret;
-        char *rp = NULL;
-        char resolved_path[PATH_MAX];
-
-        rp = realpath(mountpoint, resolved_path);
-        if (rp) {
-            ret = unmount(resolved_path, 0);
-        }
-    }
-#else
     asprintf(&umount_cmd, "/sbin/umount %s", dev);
     system(umount_cmd);
-#endif
 }
 
 void fuse_kern_unmount(const char *mountpoint, int fd)
@@ -496,29 +222,13 @@ void fuse_kern_unmount(const char *mountpoint, int fd)
     if (*ep != '\0')
         return;
 
-#if (__FreeBSD__ >= 10)
-    {
-        int ret;
-        char *rp = NULL;
-        char resolved_path[PATH_MAX];
-
-        rp = realpath(mountpoint, resolved_path);
-        if (rp) {
-            ret = unmount(resolved_path, 0);
-        }
-    }
-#else
     asprintf(&umount_cmd, "/sbin/umount " _PATH_DEV "%s", dev);
     system(umount_cmd);
-#endif
 }
 
 /* Check if kernel is doing init in background */
 static int init_backgrounded(void)
 {
-#if (__FreeBSD__ >= 10)
-    return 0;
-#else
     int ibg, len;
 
     len = sizeof(ibg);
@@ -527,7 +237,6 @@ static int init_backgrounded(void)
         return 0;
 
     return ibg;
-#endif
 }
 
 
@@ -537,55 +246,6 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
     int fd;
     char *fdnam, *dev;
     int pid;
-
-#if (__FreeBSD__ >= 10)
-    if (!mountpoint) {
-        fprintf(stderr, "missing or invalid mount point\n");
-        return -1;
-    }
-
-    if (checkloadable()) {
-        int result = loadkmod();
-        if (result) {
-            CFOptionFlags responseFlags;
-            if (result == EINVAL) {
-                if (!quiet_mode) {
-                    CFUserNotificationDisplayNotice(
-                        (CFTimeInterval)0,
-                        kCFUserNotificationCautionAlertLevel,
-                        (CFURLRef)0,
-                        (CFURLRef)0,
-                        (CFURLRef)0,
-                        CFSTR("MacFUSE Version Too Old"),
-                        CFSTR("The installed MacFUSE version is too old for the operating system. Please upgrade your MacFUSE installation to one that is compatible with the currently running operating system."),
-                        CFSTR("OK")
-                    );
-                }
-                post_notification(
-                    LIBFUSE_UNOTIFICATIONS_NOTIFY_OSISTOONEW,
-                    NULL, NULL, 0);
-            } else if (result == EBUSY) {
-                if (!quiet_mode) {
-                    CFUserNotificationDisplayNotice(
-                        (CFTimeInterval)0,
-                        kCFUserNotificationCautionAlertLevel,
-                        (CFURLRef)0,
-                        (CFURLRef)0,
-                        (CFURLRef)0,
-                        CFSTR("MacFUSE Version Mismatch"),
-                        CFSTR("MacFUSE has been updated but an incompatible or old version of the MacFUSE kernel extension is already loaded. It failed to unload, possibly because a MacFUSE volume is currently mounted.\n\nPlease eject all MacFUSE volumes and try again, or simply restart the system for changes to take effect."),
-                        CFSTR("OK")
-                    );
-                } 
-                post_notification(LIBFUSE_UNOTIFICATIONS_NOTIFY_VERSIONMISMATCH,
-                                  NULL, NULL, 0);
-            }
-            fprintf(stderr, "fusefs file system is not available (%d)\n",
-                    result);
-            return -1;
-        }
-    }
-#endif
 
     fdnam = getenv("FUSE_DEV_FD");
 
@@ -607,29 +267,12 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
 
     dev = getenv("FUSE_DEV_NAME");
 
-    if (dev) {
-        if ((fd = open(dev, O_RDWR)) < 0) {
-            perror("fuse: failed to open fuse device");
-            return -1;
-        }
-    } else {
-#define NFUSEDEVICE 16
-        int r, devidx = -1;
-        char devpath[MAXPATHLEN];
+    if (! dev)
+	dev = FUSE_DEV_TRUNK;
 
-        for (r = 0; r < NFUSEDEVICE; r++) {
-            snprintf(devpath, MAXPATHLEN - 1, "/dev/fuse%d", r);
-            fd = open(devpath, O_RDWR);
-            if (fd >= 0) {
-                dev = devpath;
-                devidx = r;
-                break;
-            }
-        }
-        if (devidx == -1) {
-            perror("fuse: failed to open fuse device");
-            return -1;
-        }
+    if ((fd = open(dev, O_RDWR)) < 0) {
+        perror("fuse: failed to open fuse device");
+        return -1;
     }
 
 mount:
@@ -679,31 +322,11 @@ mount:
             perror("fuse: failed to exec mount program");
             exit(1);
         }
-#if (__FreeBSD__ >= 10)
-        else {
-            int status;
-            waitpid(pid, &status, 0);
-            if (WIFEXITED(status) && (WEXITSTATUS(status) != 0)) {
-                exit(WEXITSTATUS(status));
-            }
-        }
-#endif
 
         exit(0);
     }
 
-#if (__FreeBSD__ >= 10)
-    {
-        int status;
-
-        waitpid(pid, &status, 0);
-        if (WIFEXITED(status) && (WEXITSTATUS(status) != 0)) {
-            exit(WEXITSTATUS(status));
-        }
-    }
-#else
     waitpid(pid, NULL, 0);
-#endif
 
 out:
     return fd;
@@ -737,6 +360,4 @@ int fuse_kern_mount(const char *mountpoint, struct fuse_args *args)
     return res;
 }
 
-#if !(__FreeBSD__ >= 10)
 __asm__(".symver fuse_unmount_compat22,fuse_unmount@FUSE_2.2");
-#endif

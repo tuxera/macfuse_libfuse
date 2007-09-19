@@ -62,11 +62,11 @@ am__libfuse_la_SOURCES_DIST = fuse.c fuse_i.h fuse_kern_chan.c \
 	modules/subdir.c modules/iconv.c mount.c mount_util.c \
 	mount_util.h mount_bsd.c
 ifeq (@host_vendor@, apple)
-am__libfuse_la_SOURCES_DIST += modules/volicon.c
+am__libfuse_la_SOURCES_DIST += modules/volicon.c mount_darwin.c
 endif
 @ICONV_TRUE@am__objects_1 = iconv.lo
 ifeq (@host_vendor@, apple)
-am__objects_1 = mount_bsd.lo
+am__objects_1 = mount_darwin.lo
 else
 @BSD_FALSE@am__objects_2 = mount.lo mount_util.lo
 @BSD_TRUE@am__objects_2 = mount_bsd.lo
@@ -220,7 +220,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include -DFUSERMOUNT_DIR=\"$(bindir)\" \
 
 lib_LTLIBRARIES = libfuse.la libulockmgr.la
 ifeq (@host_vendor@, apple)
-mount_source = mount_bsd.c
+mount_source = mount_darwin.c
 else
 @BSD_FALSE@mount_source = mount.c mount_util.c mount_util.h
 @BSD_TRUE@mount_source = mount_bsd.c
@@ -344,6 +344,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ulockmgr.Plo@am__quote@
 ifeq (@host_vendor@, apple)
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/volicon.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount_darwin.Plo@am__quote@
 endif
 
 .c.o:
