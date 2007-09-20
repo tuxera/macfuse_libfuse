@@ -36,7 +36,7 @@
 #include <sys/mount.h>
 #include <AssertMacros.h>
 
-#include "macfuse.h"
+#include "fuse_darwin.h"
 
 static int quiet_mode = 0;
 

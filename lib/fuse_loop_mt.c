@@ -16,7 +16,8 @@
 #include <unistd.h>
 #include <signal.h>
 #if (__FreeBSD__ >= 10)
-#include "darwin_compat.h"
+#define DARWIN_SEMAPHORE_COMPAT 1
+#include "fuse_darwin.h"
 #else
 #include <semaphore.h>
 #endif

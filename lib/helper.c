@@ -12,7 +12,7 @@
 #include "fuse_lowlevel.h"
 #include "fuse_common_compat.h"
 #if (__FreeBSD__ >= 10)
-#include "macfuse.h"
+#include "fuse_darwin.h"
 #endif
 
 #include <stdio.h>

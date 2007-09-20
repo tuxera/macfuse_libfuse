@@ -13,9 +13,6 @@
 #include "fuse_misc.h"
 #include "fuse_common_compat.h"
 #include "fuse_lowlevel_compat.h"
-#if (__FreeBSD__ >= 10)
-#include "macfuse.h"
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>

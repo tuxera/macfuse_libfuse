@@ -3,36 +3,20 @@
  * Amit Singh <singh@>
  */
 
-#ifndef _DARWIN_COMPAT_H_
-#define _DARWIN_COMPAT_H_
-
-#include <AvailabilityMacros.h>
-
-/* Half-baked makeshift implementation (cancelable). */
-
 #include <errno.h>
 #include <sys/types.h>
 #include <pthread.h>
-    
-typedef struct {
-    int32_t         value;
-    int32_t         wakeups;
-    pthread_mutex_t mutex;
-    pthread_cond_t  cond;
-} fuse_sem_t;
 
-typedef fuse_sem_t sem_t;
-        
-#define SEM_VALUE_DEAD ((int32_t)0xdeadbeef)
-#define SEM_VALUE_MAX  ((int32_t)32767)
+#include "fuse_darwin.h"
+
+/* Half-baked makeshift implementation (cancelable). */
 
 /* http://www.opengroup.org/onlinepubs/007908799/xsh/sem_init.html */
-static __inline__
 int
 fuse_sem_init(fuse_sem_t *sem, int pshared, int value)
 {
 
-    if (value > SEM_VALUE_MAX) {
+    if (value > FUSE_SEM_VALUE_MAX) {
         errno = EINVAL;
         return -1;
     }
@@ -56,7 +40,6 @@ fuse_sem_init(fuse_sem_t *sem, int pshared, int value)
 }
 
 /* http://www.opengroup.org/onlinepubs/007908799/xsh/sem_destroy.html */
-static __inline__
 int
 fuse_sem_destroy(fuse_sem_t *sem)
 {
@@ -81,7 +64,7 @@ fuse_sem_destroy(fuse_sem_t *sem)
 
     pthread_cond_destroy(&sem->cond);
 
-    sem->value = SEM_VALUE_DEAD;
+    sem->value = FUSE_SEM_VALUE_DEAD;
 
     pthread_mutex_unlock(&sem->mutex);
     pthread_mutex_destroy(&sem->mutex);
@@ -90,11 +73,10 @@ fuse_sem_destroy(fuse_sem_t *sem)
 }
 
 /* http://www.opengroup.org/onlinepubs/007908799/xsh/sem_wait.html */
-static __inline__
 int
 fuse_sem_wait(fuse_sem_t *sem)
 {
-    if (!sem || (sem->value == SEM_VALUE_DEAD)) {
+    if (!sem || (sem->value == FUSE_SEM_VALUE_DEAD)) {
         errno = EINVAL;
         return -1;
     }
@@ -117,11 +99,10 @@ fuse_sem_wait(fuse_sem_t *sem)
 }
 
 /* http://www.opengroup.org/onlinepubs/007908799/xsh/sem_post.html */
-static __inline__
 int
 fuse_sem_post(fuse_sem_t *sem)
 {
-    if (!sem || (sem->value == SEM_VALUE_DEAD)) {
+    if (!sem || (sem->value == FUSE_SEM_VALUE_DEAD)) {
         errno = EINVAL;
         return -1;
     }
@@ -136,10 +117,3 @@ fuse_sem_post(fuse_sem_t *sem)
 
     return 0;
 }
-
-#define sem_init(s, a, b) fuse_sem_init(s, a, b)
-#define sem_destroy(s)    fuse_sem_destroy(s)
-#define sem_post(s)       fuse_sem_post(s)
-#define sem_wait(s)       fuse_sem_wait(s)
-
-#endif /* _DARWIN_COMPAT_H_ */
