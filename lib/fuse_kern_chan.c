@@ -76,7 +76,7 @@ static int fuse_kern_chan_send(struct fuse_chan *ch, const struct iovec iov[],
 }
 
 #if (__FreeBSD__ >= 10)
-#include "macfuse.h"
+#include "fuse_darwin.h"
 #endif
 
 static void fuse_kern_chan_destroy(struct fuse_chan *ch)

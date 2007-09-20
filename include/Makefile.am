@@ -2,6 +2,12 @@
 
 fuseincludedir=$(includedir)/fuse
 
+if DARWIN
+darwin_headers = fuse_darwin.h
+else
+darwin_headers =
+endif
+
 fuseinclude_HEADERS = \
 	fuse.h			\
 	fuse_compat.h		\
@@ -9,7 +15,8 @@ fuseinclude_HEADERS = \
 	fuse_common_compat.h    \
 	fuse_lowlevel.h		\
 	fuse_lowlevel_compat.h	\
-	fuse_opt.h
+	fuse_opt.h              \
+        $(darwin_headers)
 
 include_HEADERS = old/fuse.h ulockmgr.h
 

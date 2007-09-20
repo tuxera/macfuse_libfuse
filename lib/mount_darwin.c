@@ -35,7 +35,7 @@
 #include <sys/mount.h>
 #include <AssertMacros.h>
 
-#include "macfuse.h"
+#include "fuse_darwin.h"
 
 static int quiet_mode = 0;
 
@@ -635,7 +635,7 @@ mount:
             argv[a++] = NULL;
 
             {
-                u_int32_t len;
+                int len;
                 char *title = NULL;
                 title = getproctitle(getpid(), &title, &len);
                 if (title) {
