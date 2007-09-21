@@ -494,7 +494,6 @@ volicon_bmap(const char *path, size_t blocksize, uint64_t *idx)
 static struct fuse_operations volicon_oper = {
     .getattr     = volicon_getattr,
     .readlink    = volicon_readlink,
-    .getdir      = volicon_getdir,
     .mknod       = volicon_mknod,
     .mkdir       = volicon_mkdir,
     .unlink      = volicon_unlink,
@@ -505,7 +504,6 @@ static struct fuse_operations volicon_oper = {
     .chmod       = volicon_chmod,
     .chown       = volicon_chown,
     .truncate    = volicon_truncate,
-    .utime       = volicon_utime,
     .open        = volicon_open,
     .read        = volicon_read,
     .write       = volicon_write,
