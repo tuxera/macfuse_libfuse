@@ -122,15 +122,6 @@ volicon_readlink(const char *path, char *buf, size_t size)
 }
 
 static int
-volicon_getdir(const char *path, struct fuse_dirhandle *dh,
-               fuse_dirfil_t filler_old)
-{
-    ERROR_IF_MAGIC_FILE(path, ENOTDIR);
-
-    return fuse_fs_getdir(volicon_get()->next, path, dh, filler_old);
-}
-
-static int
 volicon_mknod(const char *path, mode_t mode, dev_t rdev)
 {
     ERROR_IF_MAGIC_FILE(path, EEXIST);
@@ -209,14 +200,6 @@ volicon_truncate(const char *path, off_t size)
     ERROR_IF_MAGIC_FILE(path, EACCES);
 
     return fuse_fs_truncate(volicon_get()->next, path, size);
-}
-
-static int
-volicon_utime(const char *path, struct utimbuf *buf)
-{
-    ERROR_IF_MAGIC_FILE(path, EACCES);
-
-    return fuse_fs_utime(volicon_get()->next, path, buf);
 }
 
 static int
@@ -561,7 +544,6 @@ volicon_bmap(const char *path, size_t blocksize, uint64_t *idx)
 static struct fuse_operations volicon_oper = {
     .getattr     = volicon_getattr,
     .readlink    = volicon_readlink,
-    .getdir      = volicon_getdir,
     .mknod       = volicon_mknod,
     .mkdir       = volicon_mkdir,
     .unlink      = volicon_unlink,
@@ -572,7 +554,6 @@ static struct fuse_operations volicon_oper = {
     .chmod       = volicon_chmod,
     .chown       = volicon_chown,
     .truncate    = volicon_truncate,
-    .utime       = volicon_utime,
     .open        = volicon_open,
     .read        = volicon_read,
     .write       = volicon_write,
