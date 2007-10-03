@@ -347,7 +347,7 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
                     size_t size)
 {
 #if (__FreeBSD__ >= 10)
-    int res = getxattr(path, name, value, size, 0, 0);
+    int res = getxattr(path, name, value, size, 0, XATTR_NOFOLLOW);
 #else
     int res = lgetxattr(path, name, value, size);
 #endif
@@ -359,7 +359,7 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
 #if (__FreeBSD__ >= 10)
-    int res = listxattr(path, list, size, 0);
+    int res = listxattr(path, list, size, XATTR_NOFOLLOW);
 #else
     int res = llistxattr(path, list, size);
 #endif
@@ -371,7 +371,7 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 static int xmp_removexattr(const char *path, const char *name)
 {
 #if (__FreeBSD__ >= 10)
-    int res = removexattr(path, name, 0);
+    int res = removexattr(path, name, XATTR_NOFOLLOW);
 #else
     int res = lremovexattr(path, name);
 #endif

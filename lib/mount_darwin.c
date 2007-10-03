@@ -355,6 +355,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("fsid=",               KEY_KERN),
     FUSE_OPT_KEY("fsname=",             KEY_KERN),
     FUSE_OPT_KEY("fssubtype=",          KEY_KERN),
+    FUSE_OPT_KEY("fstypename=",         KEY_KERN),
     FUSE_OPT_KEY("init_timeout=",       KEY_KERN),
     FUSE_OPT_KEY("iosize=",             KEY_KERN),
     FUSE_OPT_KEY("jail_symlinks",       KEY_KERN),

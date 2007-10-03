@@ -436,9 +436,9 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
         char new_name[MAXPATHLEN];
         memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
         memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
-        res = getxattr(path, new_name, value, size, 0, 0);
+        res = getxattr(path, new_name, value, size, 0, XATTR_NOFOLLOW);
     } else {
-        res = getxattr(path, name, value, size, 0, 0);
+        res = getxattr(path, name, value, size, 0, XATTR_NOFOLLOW);
     }
 #else
     int res = lgetxattr(path, name, value, size);
@@ -451,7 +451,7 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
 #if (__FreeBSD__ >= 10)
-    ssize_t res = listxattr(path, list, size, 0);
+    ssize_t res = listxattr(path, list, size, XATTR_NOFOLLOW);
     if (res > 0) {
         if (list) {
             size_t len = 0;
@@ -467,7 +467,8 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
                 len += thislen;
             } while (len < res);
         } else {
-            ssize_t res2 = getxattr(path, G_KAUTH_FILESEC_XATTR, NULL, 0, 0, 0);
+            ssize_t res2 = getxattr(path, G_KAUTH_FILESEC_XATTR, NULL, 0, 0,
+                                    XATTR_NOFOLLOW);
             if (res2 >= 0) {
                 res -= sizeof(G_KAUTH_FILESEC_XATTR);
             }
@@ -489,9 +490,9 @@ static int xmp_removexattr(const char *path, const char *name)
         char new_name[MAXPATHLEN];
         memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
         memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
-        res = removexattr(path, new_name, 0);
+        res = removexattr(path, new_name, XATTR_NOFOLLOW);
     } else {
-        res = removexattr(path, name, 0);
+        res = removexattr(path, name, XATTR_NOFOLLOW);
     }
 #else
     int res = lremovexattr(path, name);
