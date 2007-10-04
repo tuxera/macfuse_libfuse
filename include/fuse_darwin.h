@@ -85,6 +85,8 @@ typedef fuse_sem_t sem_t;
 
 #endif /* DARWIN_KERNEL_COMMON */
 
+int fuse_purge_path_np(const char *path);
+
 #endif /* _FUSE_DARWIN_H_ */
 
 #endif /* __FreeBSD__ >= 10 */

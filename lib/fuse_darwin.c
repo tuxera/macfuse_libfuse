@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <pthread.h>
 
+#include <fuse_lowlevel.h>
 #include "fuse_darwin.h"
 
 /*
@@ -235,4 +236,38 @@ fuse_sem_wait(fuse_sem_t *sem)
     pthread_cleanup_pop(1);
 
     return res;
+}
+
+extern int fuse_chan_fd_np(void);
+extern fuse_ino_t fuse_lookup_inode_by_path_np(const char *path);
+
+/* XXX: <sys/ubc.h> */
+#define UBC_INVALIDATE 0x04
+
+int
+fuse_purge_path_np(const char *path)
+{
+    struct fuse_avfi_ioctl avfi;
+    fuse_ino_t ino = 0;
+    int fd = -1;
+
+    if (!path) {
+        return EINVAL;
+    }
+
+    ino = fuse_lookup_inode_by_path_np(path);
+    if (ino == 0) { /* invalid */ 
+        return ENOENT;
+    }
+
+    fd = fuse_chan_fd_np();
+    if (fd < 0) { 
+        return ENXIO;
+    }
+
+    avfi.inode = ino;
+    avfi.cmd   = FUSE_AVFI_UBC | FUSE_AVFI_PURGEATTRCACHE;
+    avfi.flags = UBC_INVALIDATE;
+
+    return ioctl(fd, FUSEDEVIOCALTERVNODEFORINODE, (void *)&avfi);
 }
