@@ -834,7 +834,11 @@ int fuse_fs_open(struct fuse_fs *fs, const char *path,
 {
     fuse_get_context()->private_data = fs->user_data;
     if (fs->op.open)
+#if (__FreeBSD__ >= 10)
+        return fuse_compat_open(fs, (char *)path, fi);
+#else
         return fuse_compat_open(fs, path, fi);
+#endif
     else
         return 0;
 }
@@ -3252,6 +3256,61 @@ void fuse_register_module(struct fuse_module *mod)
     mod->next = fuse_modules;
     fuse_modules = mod;
 }
+
+#if (__FreeBSD__ >= 10)
+
+fuse_ino_t
+fuse_lookup_inode_by_path_np(const char *path)
+{
+    fuse_ino_t ino = 0; /* invalid */
+    fuse_ino_t parent_ino = FUSE_ROOT_ID;
+    char scratch[MAXPATHLEN];
+
+    if (!path) {
+        return ino;
+    }
+
+    if (*path != '/') {
+        return ino;
+    }
+
+    strncpy(scratch, path + 1, sizeof(scratch));
+    char* p = scratch;
+    char* q = p; /* First (and maybe last) path component */
+
+    struct fuse_context *context = fuse_get_context();
+    struct fuse *f = context->fuse;
+    struct node *node = NULL;
+
+    pthread_mutex_lock(&f->lock);
+    while (p) {
+        p = strchr(p, '/');
+        if (p) {
+            *p = '\0'; /* Terminate string for use by q */
+            ++p;       /* One past the NULL (or former '/' */
+        }
+        if (*q == '.' && *(q+1) == '\0') {
+            pthread_mutex_unlock(&f->lock);
+            goto out;
+        }
+        if (*q) { /* ignore consecutive '/'s */
+            node = lookup_node(f, parent_ino, q);
+            if (!node) {
+                pthread_mutex_unlock(&f->lock);
+                goto out;
+            }
+            parent_ino = node->nodeid;
+        }
+        q = p;
+    }
+    ino = node->nodeid;
+    pthread_mutex_unlock(&f->lock);
+
+out:
+    return ino;
+}
+
+#endif /* __FreeBSD__ >= 10 */
 
 #ifndef __FreeBSD__
 

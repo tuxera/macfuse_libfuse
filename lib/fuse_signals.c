@@ -17,6 +17,17 @@ static struct fuse_session *fuse_instance;
 extern char *fuse_session_get_mntonname(struct fuse_session *se);
 
 #include <unistd.h>
+
+int
+fuse_chan_fd_np(void)
+{
+    if (fuse_instance && !fuse_session_exited(fuse_instance)) {
+        return fuse_chan_fd(fuse_session_next_chan(fuse_instance, NULL));
+    } else {
+        return -1;
+    }
+}
+
 #endif
 
 static void exit_handler(int sig)
