@@ -1,3 +1,49 @@
+2007-10-16  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Released 2.7.1
+
+2007-10-16  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Clarify licence version to be "LGPLv2" for the library
+
+	* kernel fixes:
+
+	* After mount set nlink attribute for the root inode to 1
+
+	* Fix wake up of task waiting for a reserved request
+
+	* Fix allowing setattr, listxattr and statfs for other users
+
+2007-09-18  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Add missing context initialization in fuse_fs_chmod().  Bug
+	found by "iohead"
+
+	* Fix kernel module compilation for 2.6.23.  Based on patch by
+	Marian Marinov
+
+2007-09-04  Philippe Elie  <phil.el@wanadoo.fr>
+
+	* lib/fuse_lowlevel.c: fix a fuse_req leak in do_forget()
+
+2007-07-31  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Work around hotplug issue, that it calls filesystem with file
+	descriptors 0, 1 and 2 not open.  Tracked down by Leif Johnson
+
+2007-07-25  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Don't call /bin/[u]mount if /etc/mtab is a symlink.  Reported by
+	Tomas M
+
+	* Also don't touch /etc/mtab if it is within the mounted
+	filesystem.  Suggested by Jeffrey Law
+
+2007-07-12  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Reset args->argc in fuse_opt_free_args().  Patch by Lucas
+	C. Villa Real
+
 2007-07-02  Miklos Szeredi <miklos@szeredi.hu>
 
 	* Released 2.7.0

@@ -137,7 +137,7 @@ libfuse_la_SOURCES = \
 	$(mount_source)
 
 
-@DARWIN_FALSE@libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:0 \
+@DARWIN_FALSE@libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:1 \
 @DARWIN_FALSE@	-Wl,--version-script,$(srcdir)/fuse_versionscript
 
 

@@ -108,7 +108,8 @@ EXTRA_DIST = \
 	Filesystems		\
 	FAQ			\
 	doc/how-fuse-works	\
-	doc/kernel.txt
+	doc/kernel.txt		\
+	doc/Doxyfile
 
 pkgconfig_DATA = fuse.pc
 subdir = .

@@ -2,14 +2,17 @@
     FUSE: Filesystem in Userspace
     Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
-    This program can be distributed under the terms of the GNU LGPL.
+    This program can be distributed under the terms of the GNU LGPLv2.
     See the file COPYING.LIB.
 */
 
 #ifndef _FUSE_OPT_H_
 #define _FUSE_OPT_H_
 
-/* This file defines the option parsing interface of FUSE */
+/** @file
+ *
+ * This file defines the option parsing interface of FUSE
+ */
 
 #ifdef __cplusplus
 extern "C" {

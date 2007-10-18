@@ -51,7 +51,7 @@ libfuse_la_SOURCES = 		\
 	$(mount_source)
 
 if !DARWIN
-libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:0 \
+libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:1 \
 	-Wl,--version-script,$(srcdir)/fuse_versionscript
 endif
 
