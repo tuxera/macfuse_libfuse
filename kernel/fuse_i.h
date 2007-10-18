@@ -45,6 +45,9 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
 #  define KERNEL_2_6_22_PLUS
 #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,23)
+#  define KERNEL_2_6_23_PLUS
+#endif
 
 #if defined(__arm__) && LINUX_VERSION_CODE < KERNEL_VERSION(2,6,20)
 #define DCACHE_BUG
@@ -365,6 +368,9 @@ struct fuse_conn {
 	/** waitq for blocked connection */
 	wait_queue_head_t blocked_waitq;
 
+	/** waitq for reserved requests */
+	wait_queue_head_t reserved_req_waitq;
+
 	/** The next unique request id */
 	u64 reqctr;
 
@@ -636,3 +642,8 @@ void fuse_ctl_remove_conn(struct fuse_conn *fc);
  * Is file type valid?
  */
 int fuse_valid_type(int m);
+
+/**
+ * Is task allowed to perform filesystem operation?
+ */
+int fuse_allow_task(struct fuse_conn *fc, struct task_struct *task);

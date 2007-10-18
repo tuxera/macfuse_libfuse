@@ -2,9 +2,11 @@
     FUSE: Filesystem in Userspace
     Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
-    This program can be distributed under the terms of the GNU LGPL.
+    This program can be distributed under the terms of the GNU LGPLv2.
     See the file COPYING.LIB.
 */
+
+/** @file */
 
 #if !defined(_FUSE_H_) && !defined(_FUSE_LOWLEVEL_H_)
 #error "Never include <fuse_common.h> directly; use <fuse.h> or <fuse_lowlevel.h instead."

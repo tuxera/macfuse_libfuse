@@ -2,21 +2,22 @@
     FUSE: Filesystem in Userspace
     Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
-    This program can be distributed under the terms of the GNU LGPL.
+    This program can be distributed under the terms of the GNU LGPLv2.
     See the file COPYING.LIB.
 */
 
 #ifndef _FUSE_LOWLEVEL_H_
 #define _FUSE_LOWLEVEL_H_
 
-/* =========================================================== *
- * Low level API                                               *
- * =========================================================== */
-
-/* IMPORTANT: you should define FUSE_USE_VERSION before including this
-   header.  To use the newest API define it to 26 (recommended for any
-   new application), to use the old API define it to 24 (default) or
-   25 */
+/** @file
+ *
+ * Low level API
+ *
+ * IMPORTANT: you should define FUSE_USE_VERSION before including this
+ * header.  To use the newest API define it to 26 (recommended for any
+ * new application), to use the old API define it to 24 (default) or
+ * 25
+ */
 
 #ifndef FUSE_USE_VERSION
 #define FUSE_USE_VERSION 24
@@ -74,11 +75,15 @@ struct fuse_entry_param {
      */
     fuse_ino_t ino;
 
-    /** The ino/generation pair should be unique for the filesystem's
-        lifetime */
+    /** Generation number for this entry. The ino/generation pair
+        should be unique for the filesystem's lifetime. It must be
+        non-zero, otherwise FUSE will treat it as an error. */
     unsigned long generation;
 
-    /** Inode attributes */
+    /** Inode attributes. Even if attr_timeout == 0, attr must be
+        correct. For example, for open(), FUSE uses attr.st_size from
+        lookup() to determine how many bytes to request. If this
+        value is not correct, incorrect data will be returned. */
     struct stat attr;
 
     /** Validity timeout (in seconds) for the attributes */
@@ -157,7 +162,7 @@ struct fuse_lowlevel_ops {
     void (*destroy) (void *userdata);
 
     /**
-     * Look up a directory entry by name
+     * Look up a directory entry by name and get its attributes.
      *
      * Valid replies:
      *   fuse_reply_entry
