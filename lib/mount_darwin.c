@@ -360,6 +360,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("iosize=",             KEY_KERN),
     FUSE_OPT_KEY("jail_symlinks",       KEY_KERN),
     FUSE_OPT_KEY("kill_on_unmount",     KEY_KERN),
+    FUSE_OPT_KEY("local",               KEY_KERN),
     FUSE_OPT_KEY("negative_vncache",    KEY_KERN),
     FUSE_OPT_KEY("noalerts",            KEY_KERN),
     FUSE_OPT_KEY("noappledouble",       KEY_KERN),
