@@ -14,6 +14,7 @@
 #undef _POSIX_C_SOURCE
 #include <sys/types.h>
 #define _POSIX_C_SOURCE 200112L
+#define _DARWIN_C_SOURCE /* for ENOATTR */
 #include <sys/attr.h>
 #include <sys/xattr.h>
 #include <sys/vnode.h>
@@ -309,10 +310,10 @@ volicon_getxattr(const char *path, const char *name, char *value, size_t size)
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
+    ssize_t res = 0;
+
     if ((strcmp(path, VOLICON_ROOT_MAGIC_PATH) == 0) &&
         (strcmp(name, XATTR_FINDERINFO_NAME) == 0)) {
-
-        ssize_t res;
 
         if (!size || !value) {
             return XATTR_FINDERINFO_SIZE;
@@ -333,7 +334,13 @@ volicon_getxattr(const char *path, const char *name, char *value, size_t size)
         return XATTR_FINDERINFO_SIZE;
     }
 
-    return fuse_fs_getxattr(volicon_get()->next, path, name, value, size);
+    res = fuse_fs_getxattr(volicon_get()->next, path, name, value, size);
+
+    if (res == -ENOSYS) {
+        res = -ENOATTR;
+    }
+
+    return res;
 }
 
 static int
@@ -341,10 +348,15 @@ volicon_listxattr(const char *path, char *list, size_t size)
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
+    ssize_t res = fuse_fs_listxattr(volicon_get()->next, path, list, size);
+
     if ((strcmp(path, VOLICON_ROOT_MAGIC_PATH) == 0)) {
         int done = 0;
         ssize_t sz = sizeof(XATTR_FINDERINFO_NAME);
-        ssize_t res = fuse_fs_listxattr(volicon_get()->next, path, list, size);
+
+        if (res == -ENOSYS) {
+            res = 0;
+        }
 
         if (!list) { /* size being queried */
             if (res > 0) {
@@ -387,7 +399,11 @@ volicon_listxattr(const char *path, char *list, size_t size)
         return (res + sizeof(XATTR_FINDERINFO_NAME));
     }
 
-    return fuse_fs_listxattr(volicon_get()->next, path, list, size);
+    if (res == -ENOSYS) {
+        res = 0;
+    }
+
+    return res;
 }
 
 static int
