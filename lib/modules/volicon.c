@@ -14,7 +14,6 @@
 #undef _POSIX_C_SOURCE
 #include <sys/types.h>
 #define _POSIX_C_SOURCE 200112L
-#define _DARWIN_C_SOURCE /* for ENOATTR */
 #include <sys/attr.h>
 #include <sys/xattr.h>
 #include <sys/vnode.h>
@@ -337,7 +336,7 @@ volicon_getxattr(const char *path, const char *name, char *value, size_t size)
     res = fuse_fs_getxattr(volicon_get()->next, path, name, value, size);
 
     if (res == -ENOSYS) {
-        res = -ENOATTR;
+        res = -ENOTSUP;
     }
 
     return res;
