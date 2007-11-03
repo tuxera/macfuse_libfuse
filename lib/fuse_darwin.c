@@ -271,3 +271,9 @@ fuse_purge_path_np(const char *path)
 
     return ioctl(fd, FUSEDEVIOCALTERVNODEFORINODE, (void *)&avfi);
 }
+
+const char *
+macfuse_version(void)
+{
+    return MACFUSE_VERSION;
+}
