@@ -75,6 +75,10 @@ typedef fuse_sem_t sem_t;
 #define LIBFUSE_UNOTIFICATIONS_NOTIFY_VERSIONMISMATCH \
     LIBFUSE_BUNDLE_IDENTIFIER ".versionmismatch"
 
+/* Versioning */
+
+const char *macfuse_version(void);
+
 /* Kernel */
 
 #ifdef DARWIN_KERNEL_COMMON

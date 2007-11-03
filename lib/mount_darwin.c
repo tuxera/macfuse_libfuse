@@ -428,6 +428,12 @@ fuse_kern_unmount(const char *mountpoint, int fd)
     return;
 }
 
+void
+fuse_unmount_compat22(const char *mountpoint)
+{
+    return fuse_kern_unmount(mountpoint, fuse_chan_fd_np());
+}
+
 static int
 fuse_mount_core(const char *mountpoint, const char *opts)
 {
