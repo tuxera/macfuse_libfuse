@@ -454,11 +454,13 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
                 len += thislen;
             } while (len < res);
         } else {
+            /*
             ssize_t res2 = getxattr(path, G_KAUTH_FILESEC_XATTR, NULL, 0, 0,
                                     XATTR_NOFOLLOW);
             if (res2 >= 0) {
                 res -= sizeof(G_KAUTH_FILESEC_XATTR);
             }
+            */
         }
     }
 #else
