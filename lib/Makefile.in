@@ -112,7 +112,7 @@ lib_LTLIBRARIES = libfuse.la libulockmgr.la
 @DARWIN_TRUE@mount_source = mount_darwin.c
 @LINUX_TRUE@mount_source = mount.c mount_util.c mount_util.h
 @BSD_TRUE@extra_source = 
-@DARWIN_TRUE@extra_source = fuse_darwin.c modules/volicon.c
+@DARWIN_TRUE@extra_source = fuse_darwin.c modules/threadid.c modules/volicon.c
 @LINUX_TRUE@extra_source = 
 
 @ICONV_TRUE@iconv_source = modules/iconv.c
@@ -153,7 +153,7 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 
 libfuse_la_LIBADD =
 @BSD_TRUE@am__objects_1 =
-@DARWIN_TRUE@am__objects_1 = fuse_darwin.lo volicon.lo
+@DARWIN_TRUE@am__objects_1 = fuse_darwin.lo threadid.lo volicon.lo
 @LINUX_TRUE@am__objects_1 =
 @ICONV_TRUE@am__objects_2 = iconv.lo
 @ICONV_FALSE@am__objects_2 =
@@ -186,7 +186,7 @@ am__depfiles_maybe = depfiles
 @AMDEP_TRUE@	./$(DEPDIR)/fuse_signals.Plo ./$(DEPDIR)/helper.Plo \
 @AMDEP_TRUE@	./$(DEPDIR)/iconv.Plo ./$(DEPDIR)/mount.Plo \
 @AMDEP_TRUE@	./$(DEPDIR)/mount_bsd.Plo \
-@AMDEP_TRUE@	./$(DEPDIR)/mount_darwin.Plo \
+@AMDEP_TRUE@	./$(DEPDIR)/mount_darwin.Plo ./$(DEPDIR)/threadid.Plo \
 @AMDEP_TRUE@	./$(DEPDIR)/mount_util.Plo ./$(DEPDIR)/subdir.Plo \
 @AMDEP_TRUE@	./$(DEPDIR)/ulockmgr.Plo ./$(DEPDIR)/volicon.Plo
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
@@ -239,6 +239,7 @@ clean-libLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 subdir.lo: modules/subdir.c
+threadid.lo: modules/threadid.c
 volicon.lo: modules/volicon.c
 iconv.lo: modules/iconv.c
 libfuse.la: $(libfuse_la_OBJECTS) $(libfuse_la_DEPENDENCIES) 
@@ -269,6 +270,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount_darwin.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount_util.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/subdir.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/threadid.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ulockmgr.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/volicon.Plo@am__quote@
 
@@ -310,6 +312,24 @@ subdir.lo: modules/subdir.c
 @AMDEP_TRUE@	depfile='$(DEPDIR)/subdir.Plo' tmpdepfile='$(DEPDIR)/subdir.TPlo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 	$(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o subdir.lo `test -f 'modules/subdir.c' || echo '$(srcdir)/'`modules/subdir.c
+
+threadid.o: modules/threadid.c
+@AMDEP_TRUE@	source='modules/threadid.c' object='threadid.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/threadid.Po' tmpdepfile='$(DEPDIR)/threadid.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o threadid.o `test -f 'modules/threadid.c' || echo '$(srcdir)/'`modules/threadid.c
+
+threadid.obj: modules/threadid.c
+@AMDEP_TRUE@	source='modules/threadid.c' object='threadid.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/threadid.Po' tmpdepfile='$(DEPDIR)/threadid.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o threadid.obj `cygpath -w modules/threadid.c`
+
+threadid.lo: modules/threadid.c
+@AMDEP_TRUE@	source='modules/threadid.c' object='threadid.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/threadid.Plo' tmpdepfile='$(DEPDIR)/threadid.TPlo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o threadid.lo `test -f 'modules/threadid.c' || echo '$(srcdir)/'`modules/threadid.c
 
 volicon.o: modules/volicon.c
 @AMDEP_TRUE@	source='modules/volicon.c' object='volicon.o' libtool=no @AMDEPBACKSLASH@

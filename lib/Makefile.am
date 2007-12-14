@@ -18,7 +18,7 @@ endif
 
 if DARWIN
 mount_source = mount_darwin.c
-extra_source = fuse_darwin.c modules/volicon.c
+extra_source = fuse_darwin.c modules/threadid.c modules/volicon.c
 endif
 
 if LINUX
