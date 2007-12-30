@@ -46,12 +46,12 @@ libfuse_la_SOURCES = 		\
 	fuse_signals.c		\
 	helper.c		\
 	modules/subdir.c	\
-        $(extra_source)         \
+	$(extra_source)		\
 	$(iconv_source)		\
 	$(mount_source)
 
 if !DARWIN
-libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:1 \
+libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:2 \
 	-Wl,--version-script,$(srcdir)/fuse_versionscript
 endif
 

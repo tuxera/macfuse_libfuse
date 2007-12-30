@@ -1,4 +1,4 @@
-AC_INIT(fuse, 2.7.1)
+AC_INIT(fuse, 2.7.2)
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(include/config.h)
@@ -76,7 +76,7 @@ AC_ARG_WITH([libiconv-prefix],
       if test -d $dir/lib; then LDFLAGS="$LDFLAGS -L$dir/lib"; fi
     done
    ])
-#AM_ICONV
+AM_ICONV
 libfuse_libs="$libfuse_libs $LIBICONV"
 AM_CONDITIONAL(ICONV, test "$am_cv_func_iconv" = yes)
 AC_SUBST(libfuse_libs)
