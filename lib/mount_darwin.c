@@ -109,8 +109,8 @@ out:
     return *title;
 }
 
-static long
-os_version_major(void) 
+long
+fuse_os_version_major(void) 
 {
     int ret = 0;
     long major = 0;
@@ -152,7 +152,7 @@ loadkmod(void)
     union wait status;
     long major;
 
-    major = os_version_major();
+    major = fuse_os_version_major();
 
     if (major != 8) { /* not Mac OS X 10.4.x */
         return EINVAL;
