@@ -53,7 +53,7 @@ binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 am_fusermount_OBJECTS = fusermount-fusermount.$(OBJEXT)
 fusermount_OBJECTS = $(am_fusermount_OBJECTS)
-fusermount_DEPENDENCIES = ../lib/mount_util.o
+fusermount_DEPENDENCIES = ../lib/mount_util.lo
 am_mount_fuse_OBJECTS = mount.fuse.$(OBJEXT)
 mount_fuse_OBJECTS = $(am_mount_fuse_OBJECTS)
 mount_fuse_LDADD = $(LDADD)
@@ -197,7 +197,7 @@ target_os = @target_os@
 target_vendor = @target_vendor@
 AM_CPPFLAGS = -D_FILE_OFFSET_BITS=64 
 fusermount_SOURCES = fusermount.c
-fusermount_LDADD = ../lib/mount_util.o
+fusermount_LDADD = ../lib/mount_util.lo
 fusermount_CPPFLAGS = -I../lib
 mount_fuse_SOURCES = mount.fuse.c
 ulockmgr_server_SOURCES = ulockmgr_server.c

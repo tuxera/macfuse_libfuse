@@ -1,6 +1,6 @@
 /*
   FUSE: Filesystem in Userspace
-  Copyright (C) 2005-2006 Csaba Henk <csaba.henk@creo.hu>
+  Copyright (C) 2005-2008 Csaba Henk <csaba.henk@creo.hu>
 
   This program can be distributed under the terms of the GNU LGPLv2.
   See the file COPYING.LIB.
@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/sysctl.h>
+#include <sys/user.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -21,6 +22,7 @@
 #include <errno.h>
 #include <string.h>
 #include <paths.h>
+#include <limits.h>
 
 #define FUSERMOUNT_PROG		"mount_fusefs"
 #define FUSE_DEV_TRUNK		"/dev/fuse"
@@ -40,90 +42,67 @@ struct mount_opts {
 	char *kernel_opts;
 };
 
+#define FUSE_DUAL_OPT_KEY(templ, key) 				\
+	FUSE_OPT_KEY(templ, key), FUSE_OPT_KEY("no" templ, key)
+
 static const struct fuse_opt fuse_mount_opts[] = {
 	{ "allow_other", offsetof(struct mount_opts, allow_other), 1 },
 	{ "allow_root", offsetof(struct mount_opts, allow_root), 1 },
-	FUSE_OPT_KEY("allow_root",	    KEY_ALLOW_ROOT),
-	FUSE_OPT_KEY("-r",		    KEY_RO),
-	FUSE_OPT_KEY("-h",		    KEY_HELP),
-	FUSE_OPT_KEY("--help",		    KEY_HELP),
-	FUSE_OPT_KEY("-V",		    KEY_VERSION),
-	FUSE_OPT_KEY("--version",	    KEY_VERSION),
+	FUSE_OPT_KEY("allow_root",		KEY_ALLOW_ROOT),
+	FUSE_OPT_KEY("-r",			KEY_RO),
+	FUSE_OPT_KEY("-h",			KEY_HELP),
+	FUSE_OPT_KEY("--help",			KEY_HELP),
+	FUSE_OPT_KEY("-V",			KEY_VERSION),
+	FUSE_OPT_KEY("--version",		KEY_VERSION),
 	/* standard FreeBSD mount options */
-	FUSE_OPT_KEY("dev",		    KEY_KERN),
-	FUSE_OPT_KEY("async",		    KEY_KERN),
-	FUSE_OPT_KEY("atime",		    KEY_KERN),
-	FUSE_OPT_KEY("dev",		    KEY_KERN),
-	FUSE_OPT_KEY("exec",		    KEY_KERN),
-	FUSE_OPT_KEY("suid",		    KEY_KERN),
-	FUSE_OPT_KEY("symfollow",	    KEY_KERN),
-	FUSE_OPT_KEY("rdonly",		    KEY_KERN),
-	FUSE_OPT_KEY("sync",		    KEY_KERN),
-	FUSE_OPT_KEY("union",		    KEY_KERN),
-	FUSE_OPT_KEY("userquota",	    KEY_KERN),
-	FUSE_OPT_KEY("groupquota",	    KEY_KERN),
-	FUSE_OPT_KEY("clusterr",	    KEY_KERN),
-	FUSE_OPT_KEY("clusterw",	    KEY_KERN),
-	FUSE_OPT_KEY("suiddir",		    KEY_KERN),
-	FUSE_OPT_KEY("snapshot",	    KEY_KERN),
-	FUSE_OPT_KEY("multilabel",	    KEY_KERN),
-	FUSE_OPT_KEY("acls",		    KEY_KERN),
-	FUSE_OPT_KEY("force",		    KEY_KERN),
-	FUSE_OPT_KEY("update",		    KEY_KERN),
-	FUSE_OPT_KEY("ro",		    KEY_KERN),
-	FUSE_OPT_KEY("rw",		    KEY_KERN),
-	FUSE_OPT_KEY("auto",		    KEY_KERN),
+	FUSE_DUAL_OPT_KEY("dev",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("async",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("atime",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("dev",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("exec",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("suid",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("symfollow",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("rdonly",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("sync",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("union",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("userquota",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("groupquota",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("clusterr",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("clusterw",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("suiddir",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("snapshot",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("multilabel",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("acls",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("force",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("update",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("ro",			KEY_KERN),
+	FUSE_DUAL_OPT_KEY("rw",			KEY_KERN),
+	FUSE_DUAL_OPT_KEY("auto",		KEY_KERN),
 	/* options supported under both Linux and FBSD */
-	FUSE_OPT_KEY("allow_other",	    KEY_KERN),
-	FUSE_OPT_KEY("default_permissions", KEY_KERN),
+	FUSE_DUAL_OPT_KEY("allow_other",	KEY_KERN),
+	FUSE_DUAL_OPT_KEY("default_permissions",KEY_KERN),
+	FUSE_OPT_KEY("max_read=",		KEY_KERN),
+	FUSE_OPT_KEY("subtype=",		KEY_KERN),
 	/* FBSD FUSE specific mount options */
-	FUSE_OPT_KEY("private",		    KEY_KERN),
-	FUSE_OPT_KEY("neglect_shares",	    KEY_KERN),
-	FUSE_OPT_KEY("push_symlinks_in",    KEY_KERN),
+	FUSE_DUAL_OPT_KEY("private",		KEY_KERN),
+	FUSE_DUAL_OPT_KEY("neglect_shares",	KEY_KERN),
+	FUSE_DUAL_OPT_KEY("push_symlinks_in",	KEY_KERN),
+	FUSE_OPT_KEY("nosync_unmount",		KEY_KERN),
 	/* stock FBSD mountopt parsing routine lets anything be negated... */
-	FUSE_OPT_KEY("nodev",		    KEY_KERN),
-	FUSE_OPT_KEY("noasync",		    KEY_KERN),
-	FUSE_OPT_KEY("noatime",		    KEY_KERN),
-	FUSE_OPT_KEY("nodev",		    KEY_KERN),
-	FUSE_OPT_KEY("noexec",		    KEY_KERN),
-	FUSE_OPT_KEY("nosuid",		    KEY_KERN),
-	FUSE_OPT_KEY("nosymfollow",	    KEY_KERN),
-	FUSE_OPT_KEY("nordonly",	    KEY_KERN),
-	FUSE_OPT_KEY("nosync",		    KEY_KERN),
-	FUSE_OPT_KEY("nounion",		    KEY_KERN),
-	FUSE_OPT_KEY("nouserquota",	    KEY_KERN),
-	FUSE_OPT_KEY("nogroupquota",	    KEY_KERN),
-	FUSE_OPT_KEY("noclusterr",	    KEY_KERN),
-	FUSE_OPT_KEY("noclusterw",	    KEY_KERN),
-	FUSE_OPT_KEY("nosuiddir",	    KEY_KERN),
-	FUSE_OPT_KEY("nosnapshot",	    KEY_KERN),
-	FUSE_OPT_KEY("nomultilabel",	    KEY_KERN),
-	FUSE_OPT_KEY("noacls",		    KEY_KERN),
-	FUSE_OPT_KEY("noforce",		    KEY_KERN),
-	FUSE_OPT_KEY("noupdate",	    KEY_KERN),
-	FUSE_OPT_KEY("noro",		    KEY_KERN),
-	FUSE_OPT_KEY("norw",		    KEY_KERN),
-	FUSE_OPT_KEY("noauto",		    KEY_KERN),
-	FUSE_OPT_KEY("noallow_other",	    KEY_KERN),
-	FUSE_OPT_KEY("nodefault_permissions", KEY_KERN),
-	FUSE_OPT_KEY("noprivate",	    KEY_KERN),
-	FUSE_OPT_KEY("noneglect_shares",    KEY_KERN),
-	FUSE_OPT_KEY("nopush_symlinks_in",  KEY_KERN),
 	/*
 	 * Linux specific mount options, but let just the mount util
 	 * handle them
 	 */
-	FUSE_OPT_KEY("fsname=",		    KEY_KERN),
-	FUSE_OPT_KEY("nonempty",	    KEY_KERN),
-	FUSE_OPT_KEY("large_read",	    KEY_KERN),
-	FUSE_OPT_KEY("max_read=",	    KEY_KERN),
+	FUSE_OPT_KEY("fsname=",			KEY_KERN),
+	FUSE_OPT_KEY("nonempty",		KEY_KERN),
+	FUSE_OPT_KEY("large_read",		KEY_KERN),
 	FUSE_OPT_END
 };
 
 static void mount_help(void)
 {
 	fprintf(stderr,
-		"    -o allow_root	    allow access to root\n"
+		"    -o allow_root          allow access to root\n"
 		);
 	system(FUSERMOUNT_PROG " --help");
 	fputc('\n', stderr);
@@ -172,12 +151,12 @@ void fuse_unmount_compat22(const char *mountpoint)
 	char *ssc, *umount_cmd;
 	FILE *sf;
 	int rv;
-	char *seekscript =
+	char seekscript[] =
 		/* error message is annoying in help output */
 		"exec 2>/dev/null; "
 		"/usr/bin/fstat " FUSE_DEV_TRUNK "* | "
 		"/usr/bin/awk 'BEGIN{ getline; if (! ($3 == \"PID\" && $10 == \"NAME\")) exit 1; }; "
-		"	       { if ($3 == %d) print $10; }' | "
+		"              { if ($3 == %d) print $10; }' | "
 		"/usr/bin/sort | "
 		"/usr/bin/uniq | "
 		"/usr/bin/awk '{ i += 1; if (i > 1){ exit 1; }; printf; }; END{ if (i == 0) exit 1; }'";
@@ -193,10 +172,12 @@ void fuse_unmount_compat22(const char *mountpoint)
 	 * privileges (in fact, that's what happens when we call the
 	 * setgid kmem fstat(1) utility).
 	 */
-	asprintf(&ssc, seekscript, getpid());
+	if (asprintf(&ssc, seekscript, getpid()) == -1)
+		return;
 
 	errno = 0;
 	sf = popen(ssc, "r");
+	free(ssc);
 	if (! sf)
 		return;
 
@@ -205,13 +186,43 @@ void fuse_unmount_compat22(const char *mountpoint)
 	if (rv)
 		return;
 
-	asprintf(&umount_cmd, "/sbin/umount %s", dev);
+	if (asprintf(&umount_cmd, "/sbin/umount %s", dev) == -1)
+		return;
 	system(umount_cmd);
+	free(umount_cmd);
+}
+
+static void do_unmount(char *dev, int fd)
+{
+	char device_path[SPECNAMELEN + 12];
+	const char *argv[4];
+	const char umount_cmd[] = "/sbin/umount";
+	pid_t pid;
+
+	snprintf(device_path, SPECNAMELEN + 12, _PATH_DEV "%s", dev);
+
+	argv[0] = umount_cmd;
+	argv[1] = "-f";
+	argv[2] = device_path;
+	argv[3] = NULL;
+
+	pid = fork();
+
+	if (pid == -1)
+		return;
+
+	if (pid == 0) {
+		close(fd);
+		execvp(umount_cmd, (char **)argv);
+		exit(1);
+	}
+
+	waitpid(pid, NULL, 0);
 }
 
 void fuse_kern_unmount(const char *mountpoint, int fd)
 {
-	char *ep, *umount_cmd, dev[128];
+	char *ep, dev[128];
 	struct stat sbuf;
 
 	(void)mountpoint;
@@ -228,14 +239,13 @@ void fuse_kern_unmount(const char *mountpoint, int fd)
 	if (*ep != '\0')
 		return;
 
-	asprintf(&umount_cmd, "/sbin/umount " _PATH_DEV "%s", dev);
-	system(umount_cmd);
+	do_unmount(dev, fd);
 }
 
 /* Check if kernel is doing init in background */
 static int init_backgrounded(void)
 {
-	int ibg, len;
+	unsigned ibg, len;
 
 	len = sizeof(ibg);
 
@@ -251,7 +261,8 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
 	const char *mountprog = FUSERMOUNT_PROG;
 	int fd;
 	char *fdnam, *dev;
-	int pid;
+	pid_t pid, cpid;
+	int status;
 
 	fdnam = getenv("FUSE_DEV_FD");
 
@@ -274,7 +285,7 @@ static int fuse_mount_core(const char *mountpoint, const char *opts)
 	dev = getenv("FUSE_DEV_NAME");
 
 	if (! dev)
-		dev = FUSE_DEV_TRUNK;
+		dev = (char *)FUSE_DEV_TRUNK;
 
 	if ((fd = open(dev, O_RDWR)) < 0) {
 		perror("fuse: failed to open fuse device");
@@ -286,6 +297,7 @@ mount:
 		goto out;
 
 	pid = fork();
+	cpid = pid;
 
 	if (pid == -1) {
 		perror("fuse: fork() failed");
@@ -314,8 +326,10 @@ mount:
 			const char *argv[32];
 			int a = 0;
 
-			if (! fdnam)
-				asprintf(&fdnam, "%d", fd);
+			if (! fdnam && asprintf(&fdnam, "%d", fd) == -1) {
+				perror("fuse: failed to assemble mount arguments");
+				exit(1);
+			}
 
 			argv[a++] = mountprog;
 			if (opts) {
@@ -333,7 +347,11 @@ mount:
 		exit(0);
 	}
 
-	waitpid(pid, NULL, 0);
+	if (waitpid(cpid, &status, 0) == -1 || WEXITSTATUS(status) != 0) {
+		perror("fuse: failed to mount file system");
+		close(fd);
+		return -1;
+	}
 
 out:
 	return fd;
