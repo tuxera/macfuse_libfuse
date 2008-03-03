@@ -246,7 +246,7 @@ libfuse_la_SOURCES = \
 	$(iconv_source)		\
 	$(mount_source)
 
-@DARWIN_FALSE@libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:2 \
+@DARWIN_FALSE@libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:3 \
 @DARWIN_FALSE@	-Wl,--version-script,$(srcdir)/fuse_versionscript
 
 libulockmgr_la_SOURCES = ulockmgr.c

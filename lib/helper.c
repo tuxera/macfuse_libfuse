@@ -65,9 +65,9 @@ static void usage(const char *progname)
 		"usage: %s mountpoint [options]\n\n", progname);
 	fprintf(stderr,
 		"general options:\n"
-		"    -o opt,[opt...]	    mount options\n"
-		"    -h	  --help	    print help\n"
-		"    -V	  --version	    print version\n"
+		"    -o opt,[opt...]        mount options\n"
+		"    -h   --help            print help\n"
+		"    -V   --version         print version\n"
 		"\n");
 }
 
@@ -75,9 +75,9 @@ static void helper_help(void)
 {
 	fprintf(stderr,
 		"FUSE options:\n"
-		"    -d	  -o debug	    enable debug output (implies -f)\n"
-		"    -f			    foreground operation\n"
-		"    -s			    disable multi-threaded operation\n"
+		"    -d   -o debug          enable debug output (implies -f)\n"
+		"    -f                     foreground operation\n"
+		"    -s                     disable multi-threaded operation\n"
 		"\n"
 		);
 }
