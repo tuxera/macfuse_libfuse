@@ -447,6 +447,8 @@ fuse_mount_core(const char *mountpoint, const char *opts)
         return -1;
     }
 
+    signal(SIGCHLD, SIG_DFL); /* So that we can wait4() below. */
+
     result = loadkmod();
     if (result) {
         CFOptionFlags responseFlags;
