@@ -586,7 +586,7 @@ mount:
             exit(1);
         }
 
-        exit(0);
+        _exit(0);
     }
 
 out:
