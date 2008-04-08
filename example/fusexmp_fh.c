@@ -210,6 +210,20 @@ static int xmp_link(const char *from, const char *to)
 	return 0;
 }
 
+#if (__FreeBSD__ >= 10)
+static int xmp_chflags(const char *path, uint32_t flags)
+{
+	int res;
+
+	res = chflags(path, flags);
+
+	if (res == -1)
+		return -errno;
+
+	return 0;
+}
+#endif
+
 static int xmp_chmod(const char *path, mode_t mode)
 {
 	int res;
@@ -525,6 +539,9 @@ static struct fuse_operations xmp_oper = {
 	.rmdir		= xmp_rmdir,
 	.rename		= xmp_rename,
 	.link		= xmp_link,
+#if (__FreeBSD__ >= 10)
+	.chflags	= xmp_chflags,
+#endif /* __FreeBSD__ >= 10 */
 	.chmod		= xmp_chmod,
 	.chown		= xmp_chown,
 	.truncate	= xmp_truncate,

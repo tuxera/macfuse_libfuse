@@ -1455,6 +1455,17 @@ int fuse_fs_chmod(struct fuse_fs *fs, const char *path, mode_t mode)
 		return -ENOSYS;
 }
 
+#if (__FreeBSD__ >= 10)
+int fuse_fs_chflags(struct fuse_fs *fs, const char *path, uint32_t flags)
+{
+	fuse_get_context()->private_data = fs->user_data;
+	if (fs->op.chflags)
+		return fs->op.chflags(path, flags);
+	else
+		return -ENOSYS;
+}
+#endif /* __FreeBSD__ >= 10 */
+
 static void fuse_lib_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 			     int valid, struct fuse_file_info *fi)
 {
@@ -1470,6 +1481,10 @@ static void fuse_lib_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		struct fuse_intr_data d;
 		fuse_prepare_interrupt(f, req, &d);
 		err = 0;
+#if (__FreeBSD__ >= 10)
+		if (!err && (valid & FUSE_SET_ATTR_FLAGS))
+			err = fuse_fs_chflags(f->fs, path, attr->st_flags);
+#endif /* __FreeBSD__ >= 10 */
 		if (!err && (valid & FUSE_SET_ATTR_MODE))
 			err = fuse_fs_chmod(f->fs, path, attr->st_mode);
 		if (!err && (valid & (FUSE_SET_ATTR_UID | FUSE_SET_ATTR_GID))) {

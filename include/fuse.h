@@ -124,6 +124,11 @@ struct fuse_operations {
 	/** Create a hard link to a file */
 	int (*link) (const char *, const char *);
 
+#if (__FreeBSD__ >= 10)
+	/** Change the file flags of a file */
+	int (*chflags) (const char *, uint32_t);
+#endif /* __FreeBSD__ >= 10 */
+
 	/** Change the permission bits of a file */
 	int (*chmod) (const char *, mode_t);
 
@@ -632,6 +637,9 @@ int fuse_fs_create(struct fuse_fs *fs, const char *path, mode_t mode,
 		   struct fuse_file_info *fi);
 int fuse_fs_lock(struct fuse_fs *fs, const char *path,
 		 struct fuse_file_info *fi, int cmd, struct flock *lock);
+#if (__FreeBSD__ >= 10)
+int fuse_fs_chflags(struct fuse_fs *fs, const char *path, uint32_t flags);
+#endif /* __FreeBSD__ >= 10 */
 int fuse_fs_chmod(struct fuse_fs *fs, const char *path, mode_t mode);
 int fuse_fs_chown(struct fuse_fs *fs, const char *path, uid_t uid, gid_t gid);
 int fuse_fs_truncate(struct fuse_fs *fs, const char *path, off_t size);
