@@ -78,6 +78,10 @@ static void convert_stat(const struct stat *stbuf, struct fuse_attr *attr)
 	attr->atimensec = ST_ATIM_NSEC(stbuf);
 	attr->mtimensec = ST_MTIM_NSEC(stbuf);
 	attr->ctimensec = ST_CTIM_NSEC(stbuf);
+#if (__FreeBSD__ >= 10)
+	attr->flags	= stbuf->st_flags;
+#endif /* __FreeBSD__ >= 10 */
+
 }
 
 static void convert_attr(const struct fuse_setattr_in *attr, struct stat *stbuf)
@@ -90,6 +94,9 @@ static void convert_attr(const struct fuse_setattr_in *attr, struct stat *stbuf)
 	stbuf->st_mtime	       = attr->mtime;
 	ST_ATIM_NSEC_SET(stbuf, attr->atimensec);
 	ST_MTIM_NSEC_SET(stbuf, attr->mtimensec);
+#if (__FreeBSD__ >= 10)
+	stbuf->st_flags	       = attr->flags;
+#endif /* __FreeBSD__ >= 10 */
 }
 
 static	size_t iov_length(const struct iovec *iov, size_t count)
