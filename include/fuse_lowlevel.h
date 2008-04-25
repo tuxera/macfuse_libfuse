@@ -119,7 +119,7 @@ struct fuse_ctx {
 #define FUSE_SET_ATTR_ATIME	(1 << 4)
 #define FUSE_SET_ATTR_MTIME	(1 << 5)
 #if (__FreeBSD__ >= 10)
-#define FUSE_SET_ATTR_FLAGS	(1 << 7)
+#define FUSE_SET_ATTR_FLAGS	(1 << 31)
 #endif /* __FreeBSD__ >= 10 */
 
 /* ----------------------------------------------------------- *
