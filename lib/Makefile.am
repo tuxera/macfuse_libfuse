@@ -53,11 +53,11 @@ libfuse_la_SOURCES = 		\
 if !DARWIN
 libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:3 \
 	-Wl,--version-script,$(srcdir)/fuse_versionscript
+else
+libfuse_la_LDFLAGS = -version-number 2:7:3
 endif
 
 libulockmgr_la_SOURCES = ulockmgr.c
-if !DARWIN
 libulockmgr_la_LDFLAGS = -version-number 1:0:1
-endif
 
 EXTRA_DIST = fuse_versionscript

@@ -124,13 +124,6 @@ struct fuse_operations {
 	/** Create a hard link to a file */
 	int (*link) (const char *, const char *);
 
-#if 0 /* NOTYET */
-#if (__FreeBSD__ >= 10)
-	/** Change the file flags of a file */
-	int (*chflags) (const char *, uint32_t);
-#endif /* __FreeBSD__ >= 10 */
-#endif
-
 	/** Change the permission bits of a file */
 	int (*chmod) (const char *, mode_t);
 
@@ -430,6 +423,45 @@ struct fuse_operations {
 	 * Introduced in version 2.6
 	 */
 	int (*bmap) (const char *, size_t blocksize, uint64_t *idx);
+
+#if (__FreeBSD__ >= 10)
+        int (*reserved00)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+        int (*reserved01)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+        int (*reserved02)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+        int (*reserved03)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+        int (*reserved04)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+        int (*reserved05)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+        int (*reserved06)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+        int (*reserved07)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+        int (*reserved08)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+        int (*reserved09)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+        int (*reserved10)(void *, void *, void *, void *, void *, void *,
+                          void *, void *);
+
+	int (*chflags) (const char *, uint32_t);
+
+	int (*exchange) (const char *, const char *, unsigned long);
+
+        int (*getxtimes) (const char *, struct timespec *bkuptime,
+			  struct timespec *crtime);
+
+        int (*setbkuptime) (const char *, const struct timespec *tv);
+
+        int (*setchgtime) (const char *, const struct timespec *tv);
+
+        int (*setcrtime) (const char *, const struct timespec *tv);
+
+#endif /* __FreeBSD__ >= 10 */
 };
 
 /** Extra context that may be needed by some filesystems
@@ -608,6 +640,10 @@ int fuse_fs_fgetattr(struct fuse_fs *fs, const char *path, struct stat *buf,
 		     struct fuse_file_info *fi);
 int fuse_fs_rename(struct fuse_fs *fs, const char *oldpath,
 		   const char *newpath);
+#if (__FreeBSD__ >= 10)
+int fuse_fs_exchange(struct fuse_fs *fs, const char *oldpath,
+		     const char *newpath, unsigned long flags);
+#endif /* __FreeBSD__ >= 10 */
 int fuse_fs_unlink(struct fuse_fs *fs, const char *path);
 int fuse_fs_rmdir(struct fuse_fs *fs, const char *path);
 int fuse_fs_symlink(struct fuse_fs *fs, const char *linkname,
@@ -641,6 +677,14 @@ int fuse_fs_lock(struct fuse_fs *fs, const char *path,
 		 struct fuse_file_info *fi, int cmd, struct flock *lock);
 #if (__FreeBSD__ >= 10)
 int fuse_fs_chflags(struct fuse_fs *fs, const char *path, uint32_t flags);
+int fuse_fs_getxtimes(struct fuse_fs *fs, const char *path,
+		      struct timespec *bkuptime, struct timespec *crtime);
+int fuse_fs_setbkuptime(struct fuse_fs *fs, const char *path,
+			const struct timespec *tv);
+int fuse_fs_setchgtime(struct fuse_fs *fs, const char *path,
+		       const struct timespec *tv);
+int fuse_fs_setcrtime(struct fuse_fs *fs, const char *path,
+		      const struct timespec *tv);
 #endif /* __FreeBSD__ >= 10 */
 int fuse_fs_chmod(struct fuse_fs *fs, const char *path, mode_t mode);
 int fuse_fs_chown(struct fuse_fs *fs, const char *path, uid_t uid, gid_t gid);

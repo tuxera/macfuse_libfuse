@@ -256,6 +256,22 @@ static int subdir_symlink(const char *from, const char *path)
 	return err;
 }
 
+#if (__FreeBSD__ >= 10)
+static int subdir_exchange(const char *path1, const char *path2,
+			   unsigned long options)
+{
+	struct subdir *d = subdir_get();
+	char *new1 = subdir_addpath(d, path1);
+	char *new2 = subdir_addpath(d, path2);
+	int err = -ENOMEM;
+	if (new1 && new2)
+		err = fuse_fs_exchange(d->next, new1, new2, options);
+	free(new1);
+	free(new2);
+	return err;
+}
+#endif /* __FreeBSD__ >= 10 */
+
 static int subdir_rename(const char *from, const char *to)
 {
 	struct subdir *d = subdir_get();
@@ -281,6 +297,69 @@ static int subdir_link(const char *from, const char *to)
 	free(newto);
 	return err;
 }
+
+#if (__FreeBSD__ >= 10)
+static int subdir_chflags(const char *path, uint32_t flags)
+{
+	struct subdir *d = subdir_get();
+	char *newpath = subdir_addpath(d, path);
+	int err = -ENOMEM;
+	if (newpath) {
+		err = fuse_fs_chflags(d->next, newpath, flags);
+		free(newpath);
+	}
+	return err;
+}
+
+static int subdir_getxtimes(const char *path, struct timespec *bkuptime,
+			    struct timespec *crtime)
+{
+	struct subdir *d = subdir_get();
+	char *newpath = subdir_addpath(d, path);
+	int err = -ENOMEM;
+	if (newpath) {
+		err = fuse_fs_getxtimes(d->next, newpath, bkuptime, crtime);
+		free(newpath);
+	}
+	return err;
+}
+
+static int subdir_setbkuptime(const char *path, const struct timespec *bkuptime)
+{
+	struct subdir *d = subdir_get();
+	char *newpath = subdir_addpath(d, path);
+	int err = -ENOMEM;
+	if (newpath) {
+		err = fuse_fs_setbkuptime(d->next, newpath, bkuptime);
+		free(newpath);
+	}
+	return err;
+}
+
+static int subdir_setchgtime(const char *path, const struct timespec *chgtime)
+{
+	struct subdir *d = subdir_get();
+	char *newpath = subdir_addpath(d, path);
+	int err = -ENOMEM;
+	if (newpath) {
+		err = fuse_fs_setchgtime(d->next, newpath, chgtime);
+		free(newpath);
+	}
+	return err;
+}
+
+static int subdir_setcrtime(const char *path, const struct timespec *crtime)
+{
+	struct subdir *d = subdir_get();
+	char *newpath = subdir_addpath(d, path);
+	int err = -ENOMEM;
+	if (newpath) {
+		err = fuse_fs_setcrtime(d->next, newpath, crtime);
+		free(newpath);
+	}
+	return err;
+}
+#endif /* __FreeBSD__ >= 10 */
 
 static int subdir_chmod(const char *path, mode_t mode)
 {
@@ -584,6 +663,14 @@ static struct fuse_operations subdir_oper = {
 	.removexattr	= subdir_removexattr,
 	.lock		= subdir_lock,
 	.bmap		= subdir_bmap,
+#if (__FreeBSD__ >= 10)
+	.chflags	= subdir_chflags,
+	.exchange	= subdir_exchange,
+	.getxtimes	= subdir_getxtimes,
+	.setbkuptime	= subdir_setbkuptime,
+	.setchgtime	= subdir_setchgtime,
+	.setcrtime	= subdir_setcrtime,
+#endif /* __FreeBSD__ >= 10 */
 };
 
 static struct fuse_opt subdir_opts[] = {

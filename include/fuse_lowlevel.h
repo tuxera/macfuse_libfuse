@@ -119,6 +119,9 @@ struct fuse_ctx {
 #define FUSE_SET_ATTR_ATIME	(1 << 4)
 #define FUSE_SET_ATTR_MTIME	(1 << 5)
 #if (__FreeBSD__ >= 10)
+#define FUSE_SET_ATTR_CRTIME	(1 << 28)
+#define FUSE_SET_ATTR_CHGTIME	(1 << 29)
+#define FUSE_SET_ATTR_BKUPTIME	(1 << 30)
 #define FUSE_SET_ATTR_FLAGS	(1 << 31)
 #endif /* __FreeBSD__ >= 10 */
 
@@ -810,6 +813,42 @@ struct fuse_lowlevel_ops {
 	 */
 	void (*bmap) (fuse_req_t req, fuse_ino_t ino, size_t blocksize,
 		      uint64_t idx);
+
+#if (__FreeBSD__ >= 10)
+
+        void (*reserved00) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+        void (*reserved01) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+        void (*reserved02) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+        void (*reserved03) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+        void (*reserved04) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+        void (*reserved05) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+        void (*reserved06) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+        void (*reserved07) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+        void (*reserved08) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+        void (*reserved09) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+        void (*reserved10) (fuse_req_t req, fuse_ino_t ino,
+                            void *, void *, void *, void *, void *, void *);
+
+	void (*exchange) (fuse_req_t req, fuse_ino_t parent, const char *name,
+			  fuse_ino_t newparent, const char *newname,
+                          unsigned long options);
+
+        /* setxtimes is not needed because setattr also handles xtimes */
+
+        void (*getxtimes) (fuse_req_t req, fuse_ino_t ino,
+			   struct fuse_file_info *);
+
+#endif /* __FreeBSD__ >= 10 */
 };
 
 /**

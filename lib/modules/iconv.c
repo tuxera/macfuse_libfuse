@@ -267,6 +267,26 @@ static int iconv_symlink(const char *from, const char *to)
 	return err;
 }
 
+#if (__FreeBSD__ >= 10)
+static int iconv_exchange(const char *path1, const char *path2,
+			  unsigned long options)
+{
+	struct iconv *ic = iconv_get();
+	char *new1;
+	char *new2;
+	int err = iconv_convpath(ic, path1, &new1, 0);
+	if (!err) {
+		err = iconv_convpath(ic, path2, &new2, 0);
+		if (!err) {
+			err = fuse_fs_exchange(ic->next, new1, new2, options);
+			free(new1);
+		}
+		free(new2);
+	}
+	return err;
+}
+#endif /* __FreeBSD__ >= 10 */
+
 static int iconv_rename(const char *from, const char *to)
 {
 	struct iconv *ic = iconv_get();
@@ -300,6 +320,70 @@ static int iconv_link(const char *from, const char *to)
 	}
 	return err;
 }
+
+#if (__FreeBSD__ >= 10)
+static int iconv_chflags(const char *path, uint32_t flags)
+{
+	struct iconv *ic = iconv_get();
+	char *newpath;
+	int err = iconv_convpath(ic, path, &newpath, 0);
+	if (!err) {
+		err = fuse_fs_chflags(ic->next, newpath, flags);
+		free(newpath);
+	}
+	return err;
+}
+
+static int iconv_getxtimes(const char *path, struct timespec *bkuptime,
+			   struct timespec *crtime)
+{
+	struct iconv *ic = iconv_get();
+	char *newpath;
+	int err = iconv_convpath(ic, path, &newpath, 0);
+	if (!err) {
+		err = fuse_fs_getxtimes(ic->next, newpath, bkuptime, crtime);
+		free(newpath);
+	}
+	return err;
+}
+
+static int iconv_setbkuptime(const char *path, const struct timespec *bkuptime)
+{
+	struct iconv *ic = iconv_get();
+	char *newpath;
+	int err = iconv_convpath(ic, path, &newpath, 0);
+	if (!err) {
+		err = fuse_fs_setbkuptime(ic->next, newpath, bkuptime);
+		free(newpath);
+	}
+	return err;
+}
+
+static int iconv_setchgtime(const char *path, const struct timespec *chgtime)
+{
+	struct iconv *ic = iconv_get();
+	char *newpath;
+	int err = iconv_convpath(ic, path, &newpath, 0);
+	if (!err) {
+		err = fuse_fs_setchgtime(ic->next, newpath, chgtime);
+		free(newpath);
+	}
+	return err;
+}
+
+static int iconv_setcrtime(const char *path, const struct timespec *crtime)
+{
+	struct iconv *ic = iconv_get();
+	char *newpath;
+	int err = iconv_convpath(ic, path, &newpath, 0);
+	if (!err) {
+		err = fuse_fs_setcrtime(ic->next, newpath, crtime);
+		free(newpath);
+	}
+	return err;
+}
+
+#endif /* __FreeBSD__ >= 10 */
 
 static int iconv_chmod(const char *path, mode_t mode)
 {
@@ -607,6 +691,14 @@ static struct fuse_operations iconv_oper = {
 	.removexattr	= iconv_removexattr,
 	.lock		= iconv_lock,
 	.bmap		= iconv_bmap,
+#if (__FreeBSD__ >= 10)
+	.chflags	= iconv_chflags,
+	.exchange	= iconv_exchange,
+	.getxtimes	= iconv_getxtimes,
+	.setbkuptime	= iconv_setbkuptime,
+	.setchgtime	= iconv_setchgtime,
+	.setcrtime	= iconv_setcrtime,
+#endif
 };
 
 static struct fuse_opt iconv_opts[] = {

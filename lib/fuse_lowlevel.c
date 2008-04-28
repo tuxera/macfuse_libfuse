@@ -95,7 +95,18 @@ static void convert_attr(const struct fuse_setattr_in *attr, struct stat *stbuf)
 	ST_ATIM_NSEC_SET(stbuf, attr->atimensec);
 	ST_MTIM_NSEC_SET(stbuf, attr->mtimensec);
 #if (__FreeBSD__ >= 10)
-	stbuf->st_flags	       = attr->flags;
+
+	stbuf->st_flags = attr->flags;
+
+	stbuf->st_ctime = attr->chgtime;
+	stbuf->st_ctimensec = attr->chgtimensec;
+
+	/* XXX: aaaaaaaaaaaargh */
+	stbuf->st_qspare[0] = attr->bkuptime;
+	stbuf->st_lspare = attr->bkuptimensec;
+	stbuf->st_qspare[1] = attr->crtime;
+	stbuf->st_gen = attr->crtimensec;
+
 #endif /* __FreeBSD__ >= 10 */
 }
 
@@ -323,6 +334,23 @@ static void fill_open(struct fuse_open_out *arg,
 	if (f->keep_cache)
 		arg->open_flags |= FOPEN_KEEP_CACHE;
 }
+
+#if (__FreeBSD__ >= 10)
+
+int fuse_reply_xtimes(fuse_req_t req, const struct timespec *bkuptime,
+		      const struct timespec *crtime)
+{
+	struct fuse_getxtimes_out arg;
+
+	arg.bkuptime = bkuptime->tv_sec;
+	arg.bkuptimensec = bkuptime->tv_nsec;
+	arg.crtime = crtime->tv_sec;
+	arg.crtimensec = crtime->tv_nsec;
+
+	return send_reply_ok(req, &arg, sizeof(arg));
+}
+
+#endif /* __FreeBSD__ >= 10 */
 
 int fuse_reply_entry(fuse_req_t req, const struct fuse_entry_param *e)
 {
@@ -577,6 +605,31 @@ static void do_rename(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 	else
 		fuse_reply_err(req, ENOSYS);
 }
+
+#if (__FreeBSD__ >= 10)
+static void do_exchange(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
+{
+	struct fuse_exchange_in *arg = (struct fuse_exchange_in *) inarg;
+	char *oldname = PARAM(arg);
+	char *newname = oldname + strlen(oldname) + 1;
+
+	if (req->f->op.exchange)
+		req->f->op.exchange(req, arg->olddir, oldname, arg->newdir,
+				    newname, (unsigned long)(arg->options));
+	else
+		fuse_reply_err(req, ENOSYS);
+}
+
+static void do_getxtimes(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
+{
+	(void) inarg;
+
+	if (req->f->op.getxtimes)
+		req->f->op.getxtimes(req, nodeid, NULL);
+	else
+		fuse_reply_err(req, ENOSYS);
+}
+#endif /* __FreeBSD__ >= 10 */
 
 static void do_link(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 {
@@ -1123,6 +1176,10 @@ static struct {
 	[FUSE_INTERRUPT]   = { do_interrupt,   "INTERRUPT"   },
 	[FUSE_BMAP]	   = { do_bmap,	       "BMAP"	     },
 	[FUSE_DESTROY]	   = { do_destroy,     "DESTROY"     },
+#if (__FreeBSD__ >= 10)
+	[FUSE_EXCHANGE]    = { do_exchange,    "EXCHANGE"    },
+	[FUSE_GETXTIMES]   = { do_getxtimes,   "GETXTIMES"   },
+#endif /* __FreeBSD__ >= 10 */
 };
 
 #define FUSE_MAXOP (sizeof(fuse_ll_ops) / sizeof(fuse_ll_ops[0]))

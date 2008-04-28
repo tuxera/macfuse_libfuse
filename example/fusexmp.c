@@ -167,6 +167,20 @@ static int xmp_rename(const char *from, const char *to)
 	return 0;
 }
 
+#if (__FreeBSD__ >= 10)
+static int xmp_exchange(const char *path1, const char *path2,
+			unsigned long options)
+{
+	int res;
+
+	res = exchangedata(path1, path2, options);
+	if (res == -1)
+		return -errno;
+
+	return 0;
+}
+#endif /* __FreeBSD__ >= 10 */
+
 static int xmp_link(const char *from, const char *to)
 {
 	int res;
@@ -178,7 +192,6 @@ static int xmp_link(const char *from, const char *to)
 	return 0;
 }
 
-#if 0 /* NOTYET */
 #if (__FreeBSD__ >= 10)
 static int xmp_chflags(const char *path, uint32_t flags)
 {
@@ -191,8 +204,7 @@ static int xmp_chflags(const char *path, uint32_t flags)
 
         return 0;
 }
-#endif
-#endif
+#endif /* __FreeBSD__ >= 10 */
 
 static int xmp_chmod(const char *path, mode_t mode)
 {
@@ -396,11 +408,9 @@ static struct fuse_operations xmp_oper = {
 	.rmdir		= xmp_rmdir,
 	.rename		= xmp_rename,
 	.link		= xmp_link,
-#if 0 /* NOTYET */
 #if (__FreeBSD__ >= 10)
         .chflags        = xmp_chflags,
 #endif /* __FreeBSD__ >= 10 */
-#endif
 	.chmod		= xmp_chmod,
 	.chown		= xmp_chown,
 	.truncate	= xmp_truncate,

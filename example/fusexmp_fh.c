@@ -32,6 +32,16 @@
 #include <sys/param.h>
 
 #if (__FreeBSD__ >= 10)
+
+#if defined(_POSIX_C_SOURCE)
+typedef unsigned char  u_char;
+typedef unsigned short u_short;
+typedef unsigned int   u_int;
+typedef unsigned long  u_long;
+#endif
+
+#include <sys/attr.h>
+
 #define G_PREFIX			"org"
 #define G_KAUTH_FILESEC_XATTR G_PREFIX 	".apple.system.Security"
 #define A_PREFIX			"com"
@@ -199,6 +209,20 @@ static int xmp_rename(const char *from, const char *to)
 	return 0;
 }
 
+#if (__FreeBSD__ >= 10)
+static int xmp_exchange(const char *path1, const char *path2,
+			unsigned long options)
+{
+	int res;
+
+	res = exchangedata(path1, path2, options);
+	if (res == -1)
+		return -errno;
+
+	return 0;
+}
+#endif /* __FreeBSD__ >= 10 */
+
 static int xmp_link(const char *from, const char *to)
 {
 	int res;
@@ -210,8 +234,8 @@ static int xmp_link(const char *from, const char *to)
 	return 0;
 }
 
-#if 0 /* NOTYET */
 #if (__FreeBSD__ >= 10)
+
 static int xmp_chflags(const char *path, uint32_t flags)
 {
 	int res;
@@ -223,8 +247,115 @@ static int xmp_chflags(const char *path, uint32_t flags)
 
 	return 0;
 }
-#endif
-#endif
+
+static int xmp_getxtimes(const char *path, struct timespec *bkuptime,
+			 struct timespec *crtime)
+{
+	int res = 0;
+	struct attrlist attributes;
+
+	attributes.bitmapcount = ATTR_BIT_MAP_COUNT;
+	attributes.reserved    = 0;
+	attributes.commonattr  = 0;
+	attributes.dirattr     = 0;
+	attributes.fileattr    = 0;
+	attributes.forkattr    = 0;
+	attributes.volattr     = 0;
+
+	struct xtimeattrbuf {
+		unsigned long size;
+		struct timespec xtime;
+	};
+
+	struct xtimeattrbuf buf;
+
+	attributes.commonattr = ATTR_CMN_BKUPTIME;
+	res = getattrlist(path, &attributes, &buf, sizeof(buf), FSOPT_NOFOLLOW);
+	if (res == 0)
+		(void)memcpy(bkuptime, &(buf.xtime), sizeof(struct timespec));
+	else
+		(void)memset(bkuptime, 0, sizeof(struct timespec));
+
+	attributes.commonattr = ATTR_CMN_CRTIME;
+	res = getattrlist(path, &attributes, &buf, sizeof(buf), FSOPT_NOFOLLOW);
+	if (res == 0)
+		(void)memcpy(crtime, &(buf.xtime), sizeof(struct timespec));
+	else
+		(void)memset(crtime, 0, sizeof(struct timespec));
+
+	return 0;
+}
+
+static int xmp_setbkuptime(const char *path, const struct timespec *bkuptime)
+{
+	int res;
+
+	struct attrlist attributes;
+
+	attributes.bitmapcount = ATTR_BIT_MAP_COUNT;
+	attributes.reserved = 0;
+	attributes.commonattr = ATTR_CMN_BKUPTIME;
+	attributes.dirattr = 0;
+	attributes.fileattr = 0;
+	attributes.forkattr = 0;
+	attributes.volattr = 0;
+
+	res = setattrlist(path, &attributes, bkuptime,
+			  sizeof(struct timespec), FSOPT_NOFOLLOW);
+
+	if (res == -1)
+		return -errno;
+
+	return 0;
+}
+
+static int xmp_setchgtime(const char *path, const struct timespec *chgtime)
+{
+	int res;
+
+	struct attrlist attributes;
+
+	attributes.bitmapcount = ATTR_BIT_MAP_COUNT;
+	attributes.reserved = 0;
+	attributes.commonattr = ATTR_CMN_CHGTIME;
+	attributes.dirattr = 0;
+	attributes.fileattr = 0;
+	attributes.forkattr = 0;
+	attributes.volattr = 0;
+
+	res = setattrlist(path, &attributes, chgtime,
+			  sizeof(struct timespec), FSOPT_NOFOLLOW);
+
+	if (res == -1)
+		return -errno;
+
+	return 0;
+}
+
+static int xmp_setcrtime(const char *path, const struct timespec *crtime)
+{
+	int res;
+
+	struct attrlist attributes;
+
+	attributes.bitmapcount = ATTR_BIT_MAP_COUNT;
+	attributes.reserved = 0;
+	attributes.commonattr = ATTR_CMN_CRTIME;
+	attributes.dirattr = 0;
+	attributes.fileattr = 0;
+	attributes.forkattr = 0;
+	attributes.volattr = 0;
+
+	res = setattrlist(path, &attributes, crtime,
+			  sizeof(struct timespec), FSOPT_NOFOLLOW);
+
+	if (res == -1)
+		return -errno;
+
+	return 0;
+}
+
+#endif /* __FreeBSD__ >= 10 */
 
 static int xmp_chmod(const char *path, mode_t mode)
 {
@@ -541,11 +672,9 @@ static struct fuse_operations xmp_oper = {
 	.rmdir		= xmp_rmdir,
 	.rename		= xmp_rename,
 	.link		= xmp_link,
-#if 0 /* NOTYET */
 #if (__FreeBSD__ >= 10)
 	.chflags	= xmp_chflags,
 #endif /* __FreeBSD__ >= 10 */
-#endif
 	.chmod		= xmp_chmod,
 	.chown		= xmp_chown,
 	.truncate	= xmp_truncate,
@@ -566,6 +695,13 @@ static struct fuse_operations xmp_oper = {
 	.removexattr	= xmp_removexattr,
 #endif
 	.lock		= xmp_lock,
+#if (__FreeBSD__ >= 10)
+	.exchange	= xmp_exchange,
+	.getxtimes	= xmp_getxtimes,
+	.setbkuptime	= xmp_setbkuptime,
+	.setchgtime	= xmp_setchgtime,
+	.setcrtime	= xmp_setcrtime,
+#endif /* __FreeBSD__ >= 10 */
 };
 
 int main(int argc, char *argv[])

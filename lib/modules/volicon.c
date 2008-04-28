@@ -161,6 +161,15 @@ volicon_symlink(const char *from, const char *path)
     return fuse_fs_symlink(volicon_get()->next, from, path);
 }
 
+static int volicon_exchange(const char *path1, const char *path2,
+                            unsigned long options)
+{
+    ERROR_IF_MAGIC_FILE(path1, EACCES);
+    ERROR_IF_MAGIC_FILE(path2, EACCES);
+
+    return fuse_fs_exchange(volicon_get()->next, path1, path2, options);
+}
+
 static int volicon_rename(const char *from, const char *to)
 {
     ERROR_IF_MAGIC_FILE(from, EACCES);
@@ -176,6 +185,49 @@ volicon_link(const char *from, const char *to)
     ERROR_IF_MAGIC_FILE(to, EACCES);
 
     return fuse_fs_link(volicon_get()->next, from, to);
+}
+
+static int
+volicon_chflags(const char *path, uint32_t flags)
+{
+    ERROR_IF_MAGIC_FILE(path, EACCES);
+
+    return fuse_fs_chflags(volicon_get()->next, path, flags);
+}
+
+static int
+volicon_getxtimes(const char *path, struct timespec *bkuptime,
+                  struct timespec *crtime)
+{
+    bkuptime->tv_sec = 0;
+    bkuptime->tv_nsec = 0;
+    crtime->tv_sec = 0;
+    crtime->tv_nsec = 0;
+    return 0;
+}
+
+static int
+volicon_setbkuptime(const char *path, const struct timespec *bkuptime)
+{
+    ERROR_IF_MAGIC_FILE(path, EPERM);
+
+    return fuse_fs_setbkuptime(volicon_get()->next, path, bkuptime);
+}
+
+static int
+volicon_setchgtime(const char *path, const struct timespec *chgtime)
+{
+    ERROR_IF_MAGIC_FILE(path, EPERM);
+
+    return fuse_fs_setchgtime(volicon_get()->next, path, chgtime);
+}
+
+static int
+volicon_setcrtime(const char *path, const struct timespec *crtime)
+{
+    ERROR_IF_MAGIC_FILE(path, EPERM);
+
+    return fuse_fs_setcrtime(volicon_get()->next, path, crtime);
 }
 
 static int
@@ -593,6 +645,12 @@ static struct fuse_operations volicon_oper = {
     .lock        = volicon_lock,
     .utimens     = volicon_utimens,
     .bmap        = volicon_bmap,
+    .chflags     = volicon_chflags,
+    .exchange    = volicon_exchange,
+    .getxtimes   = volicon_getxtimes,
+    .setbkuptime = volicon_setbkuptime,
+    .setchgtime  = volicon_setchgtime,
+    .setcrtime   = volicon_setcrtime,
 };
 
 static struct fuse_opt volicon_opts[] = {

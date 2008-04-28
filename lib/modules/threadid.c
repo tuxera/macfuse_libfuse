@@ -121,6 +121,16 @@ threadid_symlink(const char *from, const char *path)
     return res;
 }
 
+static int threadid_exchange(const char *path1, const char *path2,
+                             unsigned long options)
+{
+    THREADID_PRE()
+    int res = fuse_fs_exchange(threadid_get()->next, path1, path2, options);
+    THREADID_POST()
+
+    return res;
+}
+
 static int threadid_rename(const char *from, const char *to)
 {
     THREADID_PRE()
@@ -135,6 +145,57 @@ threadid_link(const char *from, const char *to)
 {
     THREADID_PRE()
     int res = fuse_fs_link(threadid_get()->next, from, to);
+    THREADID_POST()
+
+    return res;
+}
+
+static int
+threadid_chflags(const char *path, uint32_t flags)
+{
+    THREADID_PRE()
+    int res = fuse_fs_chflags(threadid_get()->next, path, flags);
+    THREADID_POST()
+
+    return res;
+}
+
+static int
+threadid_getxtimes(const char *path, struct timespec *bkuptime,
+                   struct timespec *crtime)
+{
+    THREADID_PRE()
+    int res = fuse_fs_getxtimes(threadid_get()->next, path, bkuptime, crtime);
+    THREADID_POST()
+
+    return res;
+}
+
+static int
+threadid_setbkuptime(const char *path, const struct timespec *bkuptime)
+{
+    THREADID_PRE()
+    int res = fuse_fs_setbkuptime(threadid_get()->next, path, bkuptime);
+    THREADID_POST()
+
+    return res;
+}
+
+static int
+threadid_setchgtime(const char *path, const struct timespec *chgtime)
+{
+    THREADID_PRE()
+    int res = fuse_fs_setchgtime(threadid_get()->next, path, chgtime);
+    THREADID_POST()
+
+    return res;
+}
+
+static int
+threadid_setcrtime(const char *path, const struct timespec *crtime)
+{
+    THREADID_PRE()
+    int res = fuse_fs_setcrtime(threadid_get()->next, path, crtime);
     THREADID_POST()
 
     return res;
@@ -460,6 +521,12 @@ static struct fuse_operations threadid_oper = {
     .lock        = threadid_lock,
     .utimens     = threadid_utimens,
     .bmap        = threadid_bmap,
+    .chflags     = threadid_chflags,
+    .exchange    = threadid_exchange,
+    .getxtimes   = threadid_getxtimes,
+    .setbkuptime = threadid_setbkuptime,
+    .setchgtime  = threadid_setchgtime,
+    .setcrtime   = threadid_setcrtime,
 };
 
 static struct fuse_opt threadid_opts[] = {
