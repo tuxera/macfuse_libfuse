@@ -89,6 +89,7 @@ const char *macfuse_version(void);
 
 #endif /* DARWIN_KERNEL_COMMON */
 
+int  fuse_knote_path_np(const char *path, uint32_t note);
 int  fuse_purge_path_np(const char *path);
 int  fuse_purge_path_set_size_np(const char *path, off_t newsize);
 long fuse_os_version_major(void);

@@ -268,8 +268,8 @@ fuse_purge_path_backend(const char *path, off_t newsize, int shouldsetsize)
     }
 
     avfi.inode = ino;
-    avfi.cmd   = FUSE_AVFI_UBC | FUSE_AVFI_PURGEATTRCACHE;
-    avfi.flags = UBC_INVALIDATE;
+    avfi.cmd = FUSE_AVFI_UBC | FUSE_AVFI_PURGEATTRCACHE;
+    avfi.ubc_flags = UBC_INVALIDATE;
 
     if (shouldsetsize) {
         avfi.cmd |= FUSE_AVFI_UBC_SETSIZE;
@@ -289,6 +289,36 @@ int
 fuse_purge_path_set_size_np(const char *path, off_t newsize)
 {
     return fuse_purge_path_backend(path, newsize, 1);
+}
+
+int
+fuse_knote_path_np(const char *path, uint32_t note)
+{
+    struct fuse_avfi_ioctl avfi;
+    fuse_ino_t ino = 0;
+    int fd = -1;
+
+    if (!path) {
+        return EINVAL;
+    }
+
+    ino = fuse_lookup_inode_by_path_np(path);
+    if (ino == 0) { /* invalid */ 
+        return ENOENT;
+    }
+
+    fd = fuse_chan_fd_np();
+    if (fd < 0) { 
+        return ENXIO;
+    }
+
+    avfi.inode = ino;
+    avfi.cmd = FUSE_AVFI_KNOTE;
+    avfi.ubc_flags = 0;
+    avfi.note = note;
+    avfi.size = 0;
+
+    return ioctl(fd, FUSEDEVIOCALTERVNODEFORINODE, (void *)&avfi);
 }
 
 const char *
