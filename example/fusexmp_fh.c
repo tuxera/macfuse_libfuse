@@ -672,9 +672,6 @@ static struct fuse_operations xmp_oper = {
 	.rmdir		= xmp_rmdir,
 	.rename		= xmp_rename,
 	.link		= xmp_link,
-#if (__FreeBSD__ >= 10)
-	.chflags	= xmp_chflags,
-#endif /* __FreeBSD__ >= 10 */
 	.chmod		= xmp_chmod,
 	.chown		= xmp_chown,
 	.truncate	= xmp_truncate,
@@ -696,6 +693,7 @@ static struct fuse_operations xmp_oper = {
 #endif
 	.lock		= xmp_lock,
 #if (__FreeBSD__ >= 10)
+	.chflags	= xmp_chflags,
 	.exchange	= xmp_exchange,
 	.getxtimes	= xmp_getxtimes,
 	.setbkuptime	= xmp_setbkuptime,

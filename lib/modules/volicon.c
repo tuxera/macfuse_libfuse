@@ -199,11 +199,15 @@ static int
 volicon_getxtimes(const char *path, struct timespec *bkuptime,
                   struct timespec *crtime)
 {
-    bkuptime->tv_sec = 0;
-    bkuptime->tv_nsec = 0;
-    crtime->tv_sec = 0;
-    crtime->tv_nsec = 0;
-    return 0;
+    if (volicon_is_a_magic_file(path)) {
+        bkuptime->tv_sec = 0;
+        bkuptime->tv_nsec = 0;
+        crtime->tv_sec = 0;
+        crtime->tv_nsec = 0;
+        return 0;
+    }
+
+    return fuse_fs_getxtimes(volicon_get()->next, path, bkuptime, crtime);
 }
 
 static int
