@@ -8,6 +8,10 @@
 #ifndef _FUSE_DARWIN_H_
 #define _FUSE_DARWIN_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <errno.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -93,6 +97,10 @@ int  fuse_knote_path_np(const char *path, uint32_t note);
 int  fuse_purge_path_np(const char *path);
 int  fuse_purge_path_set_size_np(const char *path, off_t newsize);
 long fuse_os_version_major(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _FUSE_DARWIN_H_ */
 

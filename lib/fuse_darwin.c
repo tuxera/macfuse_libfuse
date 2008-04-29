@@ -245,6 +245,7 @@ extern fuse_ino_t fuse_lookup_inode_by_path_np(const char *path);
 #define UBC_INVALIDATE 0x04
 
 static int fuse_purge_path_backend(const char *, off_t, int);
+extern int fuse_resize_node_by_path_np(const char *path, off_t newsize);
 
 static int
 fuse_purge_path_backend(const char *path, off_t newsize, int shouldsetsize)
@@ -276,7 +277,12 @@ fuse_purge_path_backend(const char *path, off_t newsize, int shouldsetsize)
         avfi.size = newsize;
     }
 
-    return ioctl(fd, FUSEDEVIOCALTERVNODEFORINODE, (void *)&avfi);
+    int ret = ioctl(fd, FUSEDEVIOCALTERVNODEFORINODE, (void *)&avfi);
+    if (ret == 0) {
+        ret = fuse_resize_node_by_path_np(path, newsize);;
+    }
+
+    return ret;
 }
 
 int

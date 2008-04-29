@@ -3547,6 +3547,60 @@ out:
     return ino;
 }
 
+__private_extern__
+int
+fuse_resize_node_by_path_np(const char *path, off_t newsize)
+{
+    int ret = ENOENT;
+    fuse_ino_t parent_ino = FUSE_ROOT_ID;
+    char scratch[MAXPATHLEN];
+
+    if (!path) {
+        return EINVAL;
+    }
+
+    if (*path != '/') {
+        return EINVAL;
+    }
+
+    strncpy(scratch, path + 1, sizeof(scratch));
+    char* p = scratch;
+    char* q = p; /* First (and maybe last) path component */
+
+    struct fuse_context *context = fuse_get_context();
+    struct fuse *f = context->fuse;
+    struct node *node = NULL;
+
+    pthread_mutex_lock(&f->lock);
+    while (p) {
+        p = strchr(p, '/');
+        if (p) {
+            *p = '\0'; /* Terminate string for use by q */
+            ++p;       /* One past the NULL (or former '/' */
+        }
+        if (*q == '.' && *(q+1) == '\0') {
+            pthread_mutex_unlock(&f->lock);
+            goto out;
+        }
+        if (*q) { /* ignore consecutive '/'s */
+            node = lookup_node(f, parent_ino, q);
+            if (!node) {
+                pthread_mutex_unlock(&f->lock);
+                goto out;
+            }
+            parent_ino = node->nodeid;
+        }
+        q = p;
+    }
+    node->size = newsize;
+    node->cache_valid = 0;
+    ret = 0;
+    pthread_mutex_unlock(&f->lock);
+
+out:
+    return ret;
+}
+
 #endif /* __FreeBSD__ >= 10 */
 
 #ifndef __FreeBSD__
