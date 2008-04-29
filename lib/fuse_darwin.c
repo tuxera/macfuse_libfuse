@@ -244,8 +244,10 @@ extern fuse_ino_t fuse_lookup_inode_by_path_np(const char *path);
 /* XXX: <sys/ubc.h> */
 #define UBC_INVALIDATE 0x04
 
-int
-fuse_purge_path_np(const char *path)
+static int fuse_purge_path_backend(const char *, off_t, int);
+
+static int
+fuse_purge_path_backend(const char *path, off_t newsize, int shouldsetsize)
 {
     struct fuse_avfi_ioctl avfi;
     fuse_ino_t ino = 0;
@@ -269,7 +271,24 @@ fuse_purge_path_np(const char *path)
     avfi.cmd   = FUSE_AVFI_UBC | FUSE_AVFI_PURGEATTRCACHE;
     avfi.flags = UBC_INVALIDATE;
 
+    if (shouldsetsize) {
+        avfi.cmd |= FUSE_AVFI_UBC_SETSIZE;
+        avfi.size = newsize;
+    }
+
     return ioctl(fd, FUSEDEVIOCALTERVNODEFORINODE, (void *)&avfi);
+}
+
+int
+fuse_purge_path_np(const char *path)
+{
+    return fuse_purge_path_backend(path, (off_t)0, 0);
+}
+
+int
+fuse_purge_path_set_size_np(const char *path, off_t newsize)
+{
+    return fuse_purge_path_backend(path, newsize, 1);
 }
 
 const char *
