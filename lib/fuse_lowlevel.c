@@ -607,6 +607,16 @@ static void do_rename(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 }
 
 #if (__FreeBSD__ >= 10)
+
+static void do_setvolname(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
+{
+	const char *volname = (const char *)inarg;
+	if (req->f->op.setvolname)
+		req->f->op.setvolname(req, volname);
+	else
+		fuse_reply_err(req, ENOSYS);
+}
+
 static void do_exchange(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 {
 	struct fuse_exchange_in *arg = (struct fuse_exchange_in *) inarg;
@@ -1079,6 +1089,13 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 	outarg.max_readahead = f->conn.max_readahead;
 	outarg.max_write = f->conn.max_write;
 
+#if (__FreeBSD__ >= 10)
+	if (f->conn.enable.setvolname)
+		outarg.flags |= FUSE_VOL_RENAME;
+	if (f->conn.enable.xtimes)
+		outarg.flags |= FUSE_XTIMES;
+#endif /* __FreeBSD__ >= 10 */
+
 	if (f->debug) {
 		fprintf(stderr, "   INIT: %u.%u\n", outarg.major, outarg.minor);
 		fprintf(stderr, "   flags=0x%08x\n", outarg.flags);
@@ -1177,6 +1194,7 @@ static struct {
 	[FUSE_BMAP]	   = { do_bmap,	       "BMAP"	     },
 	[FUSE_DESTROY]	   = { do_destroy,     "DESTROY"     },
 #if (__FreeBSD__ >= 10)
+	[FUSE_SETVOLNAME]  = { do_setvolname,  "SETVOLNAME"  },
 	[FUSE_EXCHANGE]    = { do_exchange,    "EXCHANGE"    },
 	[FUSE_GETXTIMES]   = { do_getxtimes,   "GETXTIMES"   },
 #endif /* __FreeBSD__ >= 10 */

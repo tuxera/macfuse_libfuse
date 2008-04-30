@@ -161,6 +161,11 @@ volicon_symlink(const char *from, const char *path)
     return fuse_fs_symlink(volicon_get()->next, from, path);
 }
 
+static int volicon_setvolname(const char *volname)
+{
+    return fuse_fs_setvolname(volicon_get()->next, volname);
+}
+
 static int volicon_exchange(const char *path1, const char *path2,
                             unsigned long options)
 {
@@ -649,12 +654,13 @@ static struct fuse_operations volicon_oper = {
     .lock        = volicon_lock,
     .utimens     = volicon_utimens,
     .bmap        = volicon_bmap,
-    .chflags     = volicon_chflags,
+    .setvolname  = volicon_setvolname,
     .exchange    = volicon_exchange,
     .getxtimes   = volicon_getxtimes,
     .setbkuptime = volicon_setbkuptime,
     .setchgtime  = volicon_setchgtime,
     .setcrtime   = volicon_setcrtime,
+    .chflags     = volicon_chflags,
 };
 
 static struct fuse_opt volicon_opts[] = {

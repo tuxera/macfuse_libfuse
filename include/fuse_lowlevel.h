@@ -839,6 +839,8 @@ struct fuse_lowlevel_ops {
         void (*reserved10) (fuse_req_t req, fuse_ino_t ino,
                             void *, void *, void *, void *, void *, void *);
 
+        void (*setvolname) (fuse_req_t req, const char *name);
+
 	void (*exchange) (fuse_req_t req, fuse_ino_t parent, const char *name,
 			  fuse_ino_t newparent, const char *newname,
                           unsigned long options);

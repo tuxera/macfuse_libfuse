@@ -307,7 +307,6 @@ static const struct fuse_opt fuse_mount_opts[] = {
     FUSE_OPT_KEY("subtype=",            KEY_IGNORED),
     FUSE_OPT_KEY("volicon=",            KEY_VOLICON),
     FUSE_OPT_KEY("volname=",            KEY_KERN),
-    FUSE_OPT_KEY("xtimes",              KEY_KERN),
     FUSE_OPT_END
 };
 

@@ -112,8 +112,22 @@ struct fuse_conn_info {
 	/**
 	 * For future use.
 	 */
+#if (__FreeBSD__ >= 10)
+	struct {
+		unsigned case_insensitive	:1;
+		unsigned setvolname		:1;
+		unsigned xtimes			:1;
+	} enable;
+	unsigned reserved[26];
+#else
 	unsigned reserved[27];
+#endif /* __FreeBSD__ >= 10 */
 };
+
+#if (__FreeBSD__ >= 10)
+#define FUSE_ENABLE_SETVOLNAME(i)	(i)->enable.setvolname = 1
+#define FUSE_ENABLE_XTIMES(i)		(i)->enable.xtimes = 1
+#endif /* __FreeBSD__ >= 10 */
 
 struct fuse_session;
 struct fuse_chan;

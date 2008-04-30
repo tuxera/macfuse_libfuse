@@ -448,7 +448,7 @@ struct fuse_operations {
         int (*reserved10)(void *, void *, void *, void *, void *, void *,
                           void *, void *);
 
-	int (*chflags) (const char *, uint32_t);
+        int (*setvolname) (const char *);
 
 	int (*exchange) (const char *, const char *, unsigned long);
 
@@ -460,6 +460,8 @@ struct fuse_operations {
         int (*setchgtime) (const char *, const struct timespec *tv);
 
         int (*setcrtime) (const char *, const struct timespec *tv);
+
+	int (*chflags) (const char *, uint32_t);
 
 #endif /* __FreeBSD__ >= 10 */
 };
@@ -641,6 +643,7 @@ int fuse_fs_fgetattr(struct fuse_fs *fs, const char *path, struct stat *buf,
 int fuse_fs_rename(struct fuse_fs *fs, const char *oldpath,
 		   const char *newpath);
 #if (__FreeBSD__ >= 10)
+int fuse_fs_setvolname(struct fuse_fs *fs, const char *volname);
 int fuse_fs_exchange(struct fuse_fs *fs, const char *oldpath,
 		     const char *newpath, unsigned long flags);
 #endif /* __FreeBSD__ >= 10 */

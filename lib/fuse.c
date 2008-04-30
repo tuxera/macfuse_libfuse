@@ -782,6 +782,15 @@ int fuse_fs_rename(struct fuse_fs *fs, const char *oldpath,
 
 #if (__FreeBSD__ >= 10)
 
+int fuse_fs_setvolname(struct fuse_fs *fs, const char *volname)
+{
+	fuse_get_context()->private_data = fs->user_data;
+	if (fs->op.setvolname)
+		return fs->op.setvolname(volname);
+	else
+		return -ENOSYS;
+}
+
 int fuse_fs_exchange(struct fuse_fs *fs, const char *path1,
 		     const char *path2, unsigned long options)
 {
@@ -1875,6 +1884,21 @@ static int exchange_node(struct fuse *f, fuse_ino_t olddir, const char *oldname,
 out:
 	pthread_mutex_unlock(&f->lock);
 	return err;
+}
+
+static void fuse_lib_setvolname(fuse_req_t req, const char *volname)
+{
+	struct fuse *f = req_fuse_prepare(req);
+	int err;
+
+	pthread_rwlock_rdlock(&f->tree_lock);
+	struct fuse_intr_data d;
+	fuse_prepare_interrupt(f, req, &d);
+	err = fuse_fs_setvolname(f->fs, volname);
+	fuse_finish_interrupt(f, req, &d);
+	pthread_rwlock_unlock(&f->tree_lock);
+
+	reply_err(req, err);
 }
 
 static void fuse_lib_exchange(fuse_req_t req, fuse_ino_t olddir,
@@ -2989,6 +3013,7 @@ static struct fuse_lowlevel_ops fuse_path_ops = {
 	.setlk = fuse_lib_setlk,
 	.bmap = fuse_lib_bmap,
 #if (__FreeBSD__ >= 10)
+        .setvolname = fuse_lib_setvolname,
         .exchange = fuse_lib_exchange,
 	.getxtimes = fuse_lib_getxtimes,
 #endif

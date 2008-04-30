@@ -121,6 +121,15 @@ threadid_symlink(const char *from, const char *path)
     return res;
 }
 
+static int threadid_setvolname(const char *volname)
+{
+    THREADID_PRE()
+    int res = fuse_fs_setvolname(threadid_get()->next, volname);
+    THREADID_POST()
+
+    return res;
+}
+
 static int threadid_exchange(const char *path1, const char *path2,
                              unsigned long options)
 {
@@ -521,12 +530,13 @@ static struct fuse_operations threadid_oper = {
     .lock        = threadid_lock,
     .utimens     = threadid_utimens,
     .bmap        = threadid_bmap,
-    .chflags     = threadid_chflags,
+    .setvolname  = threadid_setvolname,
     .exchange    = threadid_exchange,
     .getxtimes   = threadid_getxtimes,
     .setbkuptime = threadid_setbkuptime,
     .setchgtime  = threadid_setchgtime,
     .setcrtime   = threadid_setcrtime,
+    .chflags     = threadid_chflags,
 };
 
 static struct fuse_opt threadid_opts[] = {

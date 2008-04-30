@@ -257,6 +257,12 @@ static int subdir_symlink(const char *from, const char *path)
 }
 
 #if (__FreeBSD__ >= 10)
+
+static int subdir_setvolname(const char *volname)
+{
+	return fuse_fs_setvolname(subdir_get()->next, volname);
+}
+
 static int subdir_exchange(const char *path1, const char *path2,
 			   unsigned long options)
 {
@@ -270,6 +276,7 @@ static int subdir_exchange(const char *path1, const char *path2,
 	free(new2);
 	return err;
 }
+
 #endif /* __FreeBSD__ >= 10 */
 
 static int subdir_rename(const char *from, const char *to)
@@ -664,12 +671,13 @@ static struct fuse_operations subdir_oper = {
 	.lock		= subdir_lock,
 	.bmap		= subdir_bmap,
 #if (__FreeBSD__ >= 10)
-	.chflags	= subdir_chflags,
+	.setvolname	= subdir_setvolname,
 	.exchange	= subdir_exchange,
 	.getxtimes	= subdir_getxtimes,
 	.setbkuptime	= subdir_setbkuptime,
 	.setchgtime	= subdir_setchgtime,
 	.setcrtime	= subdir_setcrtime,
+	.chflags	= subdir_chflags,
 #endif /* __FreeBSD__ >= 10 */
 };
 

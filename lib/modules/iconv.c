@@ -268,6 +268,19 @@ static int iconv_symlink(const char *from, const char *to)
 }
 
 #if (__FreeBSD__ >= 10)
+
+static int iconv_setvolname(const char *volname)
+{
+	struct iconv *ic = iconv_get();
+	char *newvolname;
+	int err = iconv_convpath(ic, volname, &newvolname, 0);
+	if (!err) {
+		err = fuse_fs_setvolname(ic->next, newvolname);
+		free(newvolname);
+	}
+	return err;
+}
+
 static int iconv_exchange(const char *path1, const char *path2,
 			  unsigned long options)
 {
@@ -285,6 +298,7 @@ static int iconv_exchange(const char *path1, const char *path2,
 	}
 	return err;
 }
+
 #endif /* __FreeBSD__ >= 10 */
 
 static int iconv_rename(const char *from, const char *to)
@@ -692,12 +706,13 @@ static struct fuse_operations iconv_oper = {
 	.lock		= iconv_lock,
 	.bmap		= iconv_bmap,
 #if (__FreeBSD__ >= 10)
-	.chflags	= iconv_chflags,
+	.setvolname	= iconv_setvolname,
 	.exchange	= iconv_exchange,
 	.getxtimes	= iconv_getxtimes,
 	.setbkuptime	= iconv_setbkuptime,
 	.setchgtime	= iconv_setchgtime,
 	.setcrtime	= iconv_setcrtime,
+	.chflags	= iconv_chflags,
 #endif
 };
 

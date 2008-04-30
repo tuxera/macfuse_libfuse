@@ -210,6 +210,13 @@ static int xmp_rename(const char *from, const char *to)
 }
 
 #if (__FreeBSD__ >= 10)
+
+static int xmp_setvolname(const char *volname)
+{
+    (void)volname;
+    return 0;
+}
+
 static int xmp_exchange(const char *path1, const char *path2,
 			unsigned long options)
 {
@@ -221,6 +228,7 @@ static int xmp_exchange(const char *path1, const char *path2,
 
 	return 0;
 }
+
 #endif /* __FreeBSD__ >= 10 */
 
 static int xmp_link(const char *from, const char *to)
@@ -647,6 +655,10 @@ static int xmp_lock(const char *path, struct fuse_file_info *fi, int cmd,
 void *
 xmp_init(struct fuse_conn_info *conn)
 {
+#if (__FreeBSD__ >= 10)
+	FUSE_ENABLE_SETVOLNAME(conn);
+	FUSE_ENABLE_XTIMES(conn);
+#endif /* __FreeBSD__ >= 10 */
 	return NULL;
 }
 
@@ -693,12 +705,13 @@ static struct fuse_operations xmp_oper = {
 #endif
 	.lock		= xmp_lock,
 #if (__FreeBSD__ >= 10)
-	.chflags	= xmp_chflags,
+        .setvolname     = xmp_setvolname,
 	.exchange	= xmp_exchange,
 	.getxtimes	= xmp_getxtimes,
 	.setbkuptime	= xmp_setbkuptime,
 	.setchgtime	= xmp_setchgtime,
 	.setcrtime	= xmp_setcrtime,
+	.chflags	= xmp_chflags,
 #endif /* __FreeBSD__ >= 10 */
 };
 
