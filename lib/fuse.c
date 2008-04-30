@@ -1548,7 +1548,7 @@ static void fuse_lib_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 		if (!err && (valid & FUSE_SET_ATTR_FLAGS))
 			err = fuse_fs_chflags(f->fs, path, attr->st_flags);
 		/* XXX: don't complain if flags couldn't be written */
-		if (err == -ENOSYS)
+		if (err == -ENOSYS) {
 			err = 0;
 		}
 		if (!err && (valid & FUSE_SET_ATTR_BKUPTIME)) {
