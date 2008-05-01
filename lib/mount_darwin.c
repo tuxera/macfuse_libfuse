@@ -40,7 +40,7 @@
 
 static int quiet_mode = 0;
 
-static long
+long
 fuse_os_version_major(void)
 {
     int ret = 0;

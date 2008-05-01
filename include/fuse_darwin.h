@@ -82,6 +82,7 @@ typedef fuse_sem_t sem_t;
 /* Versioning */
 
 const char *macfuse_version(void);
+long        fuse_os_version_major(void);
 
 /* Advanced */
 
