@@ -86,8 +86,9 @@ long        fuse_os_version_major(void);
 
 /* Advanced */
 
-int fuse_knote_path_np(const char *path, uint32_t note);
-int fuse_purge_path_np(const char *path, off_t *newsize);
+int fuse_device_fd_np(const char *mountpoint);
+int fuse_knote_np(const char *mountpoint, const char *path, uint32_t note);
+int fuse_purge_np(const char *mountpoint, const char *path, off_t *newsize);
 
 #ifdef __cplusplus
 }

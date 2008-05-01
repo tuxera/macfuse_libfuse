@@ -23,8 +23,11 @@ extern "C" {
 }
 #endif
 
-fuse_ino_t fuse_lookup_inode_internal_np(const char *path);
-int        fuse_resize_node_internal_np(const char *path, off_t newsize);
+fuse_ino_t fuse_lookup_inode_internal_np(const char *mountpoint,
+                                         const char *path);
+
+int fuse_resize_node_internal_np(const char *mountpoint, const char *path,
+                                 off_t newsize);
 
 #endif /* _FUSE_DARWIN_PRIVATE_H_ */
 

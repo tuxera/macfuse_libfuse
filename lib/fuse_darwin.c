@@ -248,7 +248,7 @@ macfuse_version(void)
 #define UBC_INVALIDATE 0x04
 
 int
-fuse_purge_path_np(const char *path, off_t *newsize)
+fuse_purge_np(const char *mountpoint, const char *path, off_t *newsize)
 {
     struct fuse_avfi_ioctl avfi;
     fuse_ino_t ino = 0;
@@ -258,12 +258,12 @@ fuse_purge_path_np(const char *path, off_t *newsize)
         return EINVAL;
     }
 
-    ino = fuse_lookup_inode_internal_np(path);
+    ino = fuse_lookup_inode_internal_np(mountpoint, path);
     if (ino == 0) { /* invalid */ 
         return ENOENT;
     }
 
-    fd = fuse_chan_fd_np();
+    fd = fuse_device_fd_np(mountpoint);
     if (fd < 0) { 
         return ENXIO;
     }
@@ -279,14 +279,14 @@ fuse_purge_path_np(const char *path, off_t *newsize)
 
     int ret = ioctl(fd, FUSEDEVIOCALTERVNODEFORINODE, (void *)&avfi);
     if ((ret == 0) && newsize) {
-        ret = fuse_resize_node_internal_np(path, *newsize);;
+        ret = fuse_resize_node_internal_np(mountpoint, path, *newsize);;
     }
 
     return ret;
 }
 
 int
-fuse_knote_path_np(const char *path, uint32_t note)
+fuse_knote_np(const char *mountpoint, const char *path, uint32_t note)
 {
     struct fuse_avfi_ioctl avfi;
     fuse_ino_t ino = 0;
@@ -296,12 +296,12 @@ fuse_knote_path_np(const char *path, uint32_t note)
         return EINVAL;
     }
 
-    ino = fuse_lookup_inode_by_path_np(path);
+    ino = fuse_lookup_inode_internal_np(mountpoint, path);
     if (ino == 0) { /* invalid */ 
         return ENOENT;
     }
 
-    fd = fuse_chan_fd_np();
+    fd = fuse_device_fd_np(mountpoint);
     if (fd < 0) { 
         return ENXIO;
     }

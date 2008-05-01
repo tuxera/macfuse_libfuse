@@ -3544,11 +3544,13 @@ void fuse_register_module(struct fuse_module *mod)
 #if (__FreeBSD__ >= 10)
 
 fuse_ino_t
-fuse_lookup_inode_internal_np(const char *path)
+fuse_lookup_inode_internal_np(const char *mountpoint, const char *path)
 {
 	fuse_ino_t ino = 0; /* invalid */
 	fuse_ino_t parent_ino = FUSE_ROOT_ID;
 	char scratch[MAXPATHLEN];
+
+	(void)mountpoint;
 
 	if (the_fuse == NULL) {
 		return ino;
@@ -3599,11 +3601,14 @@ out:
 
 __private_extern__
 int
-fuse_resize_node_internal_np(const char *path, off_t newsize)
+fuse_resize_node_internal_np(const char *mountpoint, const char *path,
+			     off_t newsize)
 {
 	int ret = ENOENT;
 	fuse_ino_t parent_ino = FUSE_ROOT_ID;
 	char scratch[MAXPATHLEN];
+
+	(void)mountpoint;
 
 	if (the_fuse == NULL) {
 		return EINVAL;
