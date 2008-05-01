@@ -183,7 +183,9 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 fuseincludedir = $(includedir)/fuse
 @DARWIN_FALSE@darwin_headers = 
+@DARWIN_FALSE@darwin_headers_private =
 @DARWIN_TRUE@darwin_headers = fuse_darwin.h
+@DARWIN_TRUE@darwin_headers_private = fuse_darwin_private.h
 fuseinclude_HEADERS = \
 	$(darwin_headers)	\
 	fuse.h			\
@@ -195,7 +197,7 @@ fuseinclude_HEADERS = \
 	fuse_opt.h
 
 include_HEADERS = old/fuse.h ulockmgr.h
-noinst_HEADERS = fuse_kernel.h
+noinst_HEADERS = fuse_kernel.h $(darwin_headers_private)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 

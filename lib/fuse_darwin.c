@@ -8,7 +8,7 @@
 #include <pthread.h>
 
 #include <fuse_lowlevel.h>
-#include "fuse_darwin.h"
+#include "fuse_darwin_private.h"
 
 /*
  * Semaphore implementation based on:
@@ -238,17 +238,17 @@ fuse_sem_wait(fuse_sem_t *sem)
     return res;
 }
 
-extern int fuse_chan_fd_np(void);
-extern fuse_ino_t fuse_lookup_inode_by_path_np(const char *path);
+const char *
+macfuse_version(void)
+{
+    return MACFUSE_VERSION;
+}
 
 /* XXX: <sys/ubc.h> */
 #define UBC_INVALIDATE 0x04
 
-static int fuse_purge_path_backend(const char *, off_t, int);
-extern int fuse_resize_node_by_path_np(const char *path, off_t newsize);
-
-static int
-fuse_purge_path_backend(const char *path, off_t newsize, int shouldsetsize)
+int
+fuse_purge_path_np(const char *path, off_t *newsize)
 {
     struct fuse_avfi_ioctl avfi;
     fuse_ino_t ino = 0;
@@ -258,7 +258,7 @@ fuse_purge_path_backend(const char *path, off_t newsize, int shouldsetsize)
         return EINVAL;
     }
 
-    ino = fuse_lookup_inode_by_path_np(path);
+    ino = fuse_lookup_inode_internal_np(path);
     if (ino == 0) { /* invalid */ 
         return ENOENT;
     }
@@ -272,29 +272,17 @@ fuse_purge_path_backend(const char *path, off_t newsize, int shouldsetsize)
     avfi.cmd = FUSE_AVFI_UBC | FUSE_AVFI_PURGEATTRCACHE;
     avfi.ubc_flags = UBC_INVALIDATE;
 
-    if (shouldsetsize) {
+    if (newsize) {
         avfi.cmd |= FUSE_AVFI_UBC_SETSIZE;
-        avfi.size = newsize;
+        avfi.size = *newsize;
     }
 
     int ret = ioctl(fd, FUSEDEVIOCALTERVNODEFORINODE, (void *)&avfi);
-    if (ret == 0) {
-        ret = fuse_resize_node_by_path_np(path, newsize);;
+    if ((ret == 0) && newsize) {
+        ret = fuse_resize_node_internal_np(path, *newsize);;
     }
 
     return ret;
-}
-
-int
-fuse_purge_path_np(const char *path)
-{
-    return fuse_purge_path_backend(path, (off_t)0, 0);
-}
-
-int
-fuse_purge_path_set_size_np(const char *path, off_t newsize)
-{
-    return fuse_purge_path_backend(path, newsize, 1);
 }
 
 int
@@ -325,10 +313,4 @@ fuse_knote_path_np(const char *path, uint32_t note)
     avfi.size = 0;
 
     return ioctl(fd, FUSEDEVIOCALTERVNODEFORINODE, (void *)&avfi);
-}
-
-const char *
-macfuse_version(void)
-{
-    return MACFUSE_VERSION;
 }

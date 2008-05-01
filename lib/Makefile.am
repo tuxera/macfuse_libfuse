@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 if DARWIN
-AM_CPPFLAGS_DARWIN = -D__FreeBSD__=10 -DDARWIN_KERNEL_COMMON=1
+AM_CPPFLAGS_DARWIN = -D__FreeBSD__=10
 else
 AM_CPPFLAGS_DARWIN =
 endif

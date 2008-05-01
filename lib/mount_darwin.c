@@ -36,11 +36,11 @@
 #include <sys/mount.h>
 #include <AssertMacros.h>
 
-#include "fuse_darwin.h"
+#include "fuse_darwin_private.h"
 
 static int quiet_mode = 0;
 
-long
+static long
 fuse_os_version_major(void)
 {
     int ret = 0;
@@ -431,7 +431,13 @@ fuse_kern_unmount(const char *mountpoint, int fd)
 void
 fuse_unmount_compat22(const char *mountpoint)
 {
-    return fuse_kern_unmount(mountpoint, fuse_chan_fd_np());
+    char resolved_path[PATH_MAX];
+    char *rp = realpath(mountpoint, resolved_path);
+    if (rp) {
+        (void)unmount(resolved_path, 0);
+    }
+
+    return;
 }
 
 static int

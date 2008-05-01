@@ -3305,6 +3305,13 @@ struct fuse *fuse_new_common(struct fuse_chan *ch, struct fuse_args *args,
 	struct fuse_fs *fs;
 	struct fuse_lowlevel_ops llop = fuse_path_ops;
 
+#if (__FreeBSD__ >= 10)
+	if (the_fuse != NULL) {
+		fprintf(stderr, "fuse: multiple concurrent file systems not supported\n");
+		goto out;
+	}
+#endif /* __FreeBSD__ >= 10 */
+
 	if (fuse_create_context_key() == -1)
 		goto out;
 
@@ -3537,7 +3544,7 @@ void fuse_register_module(struct fuse_module *mod)
 #if (__FreeBSD__ >= 10)
 
 fuse_ino_t
-fuse_lookup_inode_by_path_np(const char *path)
+fuse_lookup_inode_internal_np(const char *path)
 {
 	fuse_ino_t ino = 0; /* invalid */
 	fuse_ino_t parent_ino = FUSE_ROOT_ID;
@@ -3592,7 +3599,7 @@ out:
 
 __private_extern__
 int
-fuse_resize_node_by_path_np(const char *path, off_t newsize)
+fuse_resize_node_internal_np(const char *path, off_t newsize)
 {
 	int ret = ENOENT;
 	fuse_ino_t parent_ino = FUSE_ROOT_ID;

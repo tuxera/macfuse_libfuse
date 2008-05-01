@@ -17,7 +17,7 @@
 #include <signal.h>
 #if (__FreeBSD__ >= 10)
 #define DARWIN_SEMAPHORE_COMPAT 1
-#include "fuse_darwin.h"
+#include "fuse_darwin_private.h"
 #else
 #include <semaphore.h>
 #endif

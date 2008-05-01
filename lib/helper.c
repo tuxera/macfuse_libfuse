@@ -13,7 +13,7 @@
 #include "fuse_lowlevel.h"
 #include "fuse_common_compat.h"
 #if (__FreeBSD__ >= 10)
-#include "fuse_darwin.h"
+#include "fuse_darwin_private.h"
 #endif
 
 #include <stdio.h>
