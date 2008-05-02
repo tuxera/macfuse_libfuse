@@ -41,7 +41,7 @@
 static int quiet_mode = 0;
 
 long
-fuse_os_version_major(void)
+fuse_os_version_major_np(void)
 {
     int ret = 0;
     long major = 0;
@@ -80,7 +80,7 @@ loadkmod(void)
     union wait status;
     long major;
 
-    major = fuse_os_version_major();
+    major = fuse_os_version_major_np();
 
     if (major < 9) { /* not Mac OS X 10.5+ */
         return EINVAL;
