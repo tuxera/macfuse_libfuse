@@ -16,6 +16,9 @@
 #include "fuse_misc.h"
 #include "fuse_common_compat.h"
 #include "fuse_compat.h"
+#if (__FreeBSD__ >= 10)
+#include "fuse_darwin_private.h"
+#endif /* __FreeBSD__ >= 10 */
 
 #include <stdio.h>
 #include <string.h>
@@ -91,10 +94,6 @@ struct fuse {
 	int intr_installed;
 	struct fuse_fs *fs;
 };
-
-#if (__FreeBSD__ >= 10)
-static struct fuse *the_fuse = NULL;
-#endif /* __FreeBSD__ >= 10 */
 
 struct lock {
 	int type;
@@ -1523,6 +1522,7 @@ int fuse_fs_chmod(struct fuse_fs *fs, const char *path, mode_t mode)
 }
 
 #if (__FreeBSD__ >= 10)
+
 int fuse_fs_chflags(struct fuse_fs *fs, const char *path, uint32_t flags)
 {
 	fuse_get_context()->private_data = fs->user_data;
@@ -1531,6 +1531,7 @@ int fuse_fs_chflags(struct fuse_fs *fs, const char *path, uint32_t flags)
 	else
 		return -ENOSYS;
 }
+
 #endif /* __FreeBSD__ >= 10 */
 
 static void fuse_lib_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
@@ -3305,13 +3306,6 @@ struct fuse *fuse_new_common(struct fuse_chan *ch, struct fuse_args *args,
 	struct fuse_fs *fs;
 	struct fuse_lowlevel_ops llop = fuse_path_ops;
 
-#if (__FreeBSD__ >= 10)
-	if (the_fuse != NULL) {
-		fprintf(stderr, "fuse: multiple concurrent file systems not supported\n");
-		goto out;
-	}
-#endif /* __FreeBSD__ >= 10 */
-
 	if (fuse_create_context_key() == -1)
 		goto out;
 
@@ -3430,7 +3424,7 @@ struct fuse *fuse_new_common(struct fuse_chan *ch, struct fuse_args *args,
 	hash_id(f, root);
 
 #if (__FreeBSD__ >= 10)
-	the_fuse = f;
+        fuse_set_fuse_internal_np(fuse_chan_fd(ch), f);
 #endif /* __FreeBSD__ >= 10 */
 
 	return f;
@@ -3469,6 +3463,10 @@ struct fuse *fuse_new(struct fuse_chan *ch, struct fuse_args *args,
 void fuse_destroy(struct fuse *f)
 {
 	size_t i;
+
+#if (__FreeBSD__ >= 10)
+        fuse_unset_fuse_internal_np(f);
+#endif /* __FreeBSD__ >= 10 */
 
 	if (f->conf.intr && f->intr_installed)
 		fuse_restore_intr_signal(f->conf.intr_signal);
@@ -3510,9 +3508,6 @@ void fuse_destroy(struct fuse *f)
 	fuse_session_destroy(f->se);
 	free(f->conf.modules);
 	free(f);
-#if (__FreeBSD__ >= 10)
-	the_fuse = NULL;
-#endif /* __FreeBSD__ >= 10 */
 	fuse_delete_context_key();
 }
 
@@ -3543,18 +3538,37 @@ void fuse_register_module(struct fuse_module *mod)
 
 #if (__FreeBSD__ >= 10)
 
+struct fuse *
+fuse_get_internal_np(const char *mountpoint)
+{
+    struct fuse *fuse = NULL;
+    if (mountpoint) {
+        pthread_mutex_lock(&mount_lock);
+        struct mount_info *mi =
+            hash_search(mount_hash, (char *)mountpoint, NULL, NULL);
+        if (mi) {
+            fuse = mi->fuse;
+            pthread_mutex_lock(&fuse->lock);
+        }
+        pthread_mutex_unlock(&mount_lock);
+    }
+    return fuse;
+}
+
+void
+fuse_put_internal_np(struct fuse *fuse)
+{
+    if (fuse) {
+        pthread_mutex_unlock(&fuse->lock);
+    }
+}
+
 fuse_ino_t
 fuse_lookup_inode_internal_np(const char *mountpoint, const char *path)
 {
 	fuse_ino_t ino = 0; /* invalid */
 	fuse_ino_t parent_ino = FUSE_ROOT_ID;
 	char scratch[MAXPATHLEN];
-
-	(void)mountpoint;
-
-	if (the_fuse == NULL) {
-		return ino;
-	}
 
 	if (!path) {
 		return ino;
@@ -3568,10 +3582,13 @@ fuse_lookup_inode_internal_np(const char *mountpoint, const char *path)
 	char* p = scratch;
 	char* q = p; /* First (and maybe last) path component */
 
-	struct fuse *f = the_fuse;
 	struct node *node = NULL;
 
-	pthread_mutex_lock(&f->lock);
+        struct fuse *f = fuse_get_internal_np(mountpoint);
+	if (f == NULL) {
+		return ino;
+	}
+
 	while (p) {
 		p = strchr(p, '/');
 		if (p) {
@@ -3579,13 +3596,13 @@ fuse_lookup_inode_internal_np(const char *mountpoint, const char *path)
 			++p;	   /* One past the NULL (or former '/' */
 		}
 		if (*q == '.' && *(q+1) == '\0') {
-			pthread_mutex_unlock(&f->lock);
+			fuse_put_internal_np(f);
 			goto out;
 		}
 		if (*q) { /* ignore consecutive '/'s */
 			node = lookup_node(f, parent_ino, q);
 			if (!node) {
-				pthread_mutex_unlock(&f->lock);
+				fuse_put_internal_np(f);
 				goto out;
 			}
 			parent_ino = node->nodeid;
@@ -3593,7 +3610,7 @@ fuse_lookup_inode_internal_np(const char *mountpoint, const char *path)
 		q = p;
 	}
 	ino = node->nodeid;
-	pthread_mutex_unlock(&f->lock);
+	fuse_put_internal_np(f);
 
 out:
 	return ino;
@@ -3608,12 +3625,6 @@ fuse_resize_node_internal_np(const char *mountpoint, const char *path,
 	fuse_ino_t parent_ino = FUSE_ROOT_ID;
 	char scratch[MAXPATHLEN];
 
-	(void)mountpoint;
-
-	if (the_fuse == NULL) {
-		return EINVAL;
-	}
-
 	if (!path) {
 		return EINVAL;
 	}
@@ -3626,10 +3637,13 @@ fuse_resize_node_internal_np(const char *mountpoint, const char *path,
 	char* p = scratch;
 	char* q = p; /* First (and maybe last) path component */
 
-	struct fuse *f = the_fuse;
 	struct node *node = NULL;
 
-	pthread_mutex_lock(&f->lock);
+        struct fuse *f = fuse_get_internal_np(mountpoint);
+	if (f == NULL) {
+		return EINVAL;
+	}
+
 	while (p) {
 		p = strchr(p, '/');
 		if (p) {
@@ -3637,13 +3651,13 @@ fuse_resize_node_internal_np(const char *mountpoint, const char *path,
 			++p;	   /* One past the NULL (or former '/' */
 		}
 		if (*q == '.' && *(q+1) == '\0') {
-			pthread_mutex_unlock(&f->lock);
+			fuse_put_internal_np(f);
 			goto out;
 		}
 		if (*q) { /* ignore consecutive '/'s */
 			node = lookup_node(f, parent_ino, q);
 			if (!node) {
-				pthread_mutex_unlock(&f->lock);
+				fuse_put_internal_np(f);
 				goto out;
 			}
 			parent_ino = node->nodeid;
@@ -3653,7 +3667,7 @@ fuse_resize_node_internal_np(const char *mountpoint, const char *path,
 	node->size = newsize;
 	node->cache_valid = 0;
 	ret = 0;
-	pthread_mutex_unlock(&f->lock);
+	fuse_put_internal_np(f);
 
 out:
 	return ret;

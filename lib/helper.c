@@ -207,6 +207,9 @@ int fuse_daemonize(int foreground)
 			perror("fuse: failed to daemonize program\n");
 			return -1;
 		}
+#if (__FreeBSD__ >= 10)
+		did_daemonize = 1;
+#endif /* __FreeBSD__ >= 10 */
 	}
 	return 0;
 }
@@ -295,10 +298,6 @@ static struct fuse *fuse_setup_common(int argc, char *argv[],
 
 	if (fd)
 		*fd = fuse_chan_fd(ch);
-
-#if (__FreeBSD__ >= 10)
-	fuse_session_set_mntonname(fuse_get_session(fuse), *mountpoint);
-#endif
 
 	return fuse;
 
