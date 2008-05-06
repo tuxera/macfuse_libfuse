@@ -110,7 +110,7 @@ out:
 }
 
 long
-fuse_os_version_major(void) 
+fuse_os_version_major_np(void) 
 {
     int ret = 0;
     long major = 0;
@@ -152,7 +152,7 @@ loadkmod(void)
     union wait status;
     long major;
 
-    major = fuse_os_version_major();
+    major = fuse_os_version_major_np();
 
     if (major != 8) { /* not Mac OS X 10.4.x */
         return EINVAL;
@@ -503,7 +503,7 @@ fuse_kern_unmount(const char *mountpoint, int fd)
 void
 fuse_unmount_compat22(const char *mountpoint)
 {
-    return fuse_kern_unmount(mountpoint, fuse_chan_fd_np());
+    return fuse_kern_unmount(mountpoint, fuse_device_fd_np());
 }
 
 static int

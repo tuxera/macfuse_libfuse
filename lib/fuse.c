@@ -3263,48 +3263,6 @@ fuse_ino_t
 fuse_lookup_inode_by_path_np(const char *path)
 {
     fuse_ino_t ino = 0; /* invalid */
-    fuse_ino_t parent_ino = FUSE_ROOT_ID;
-    char scratch[MAXPATHLEN];
-
-    if (!path) {
-        return ino;
-    }
-
-    if (*path != '/') {
-        return ino;
-    }
-
-    strncpy(scratch, path + 1, sizeof(scratch));
-    char* p = scratch;
-    char* q = p; /* First (and maybe last) path component */
-
-    struct fuse_context *context = fuse_get_context();
-    struct fuse *f = context->fuse;
-    struct node *node = NULL;
-
-    pthread_mutex_lock(&f->lock);
-    while (p) {
-        p = strchr(p, '/');
-        if (p) {
-            *p = '\0'; /* Terminate string for use by q */
-            ++p;       /* One past the NULL (or former '/' */
-        }
-        if (*q == '.' && *(q+1) == '\0') {
-            pthread_mutex_unlock(&f->lock);
-            goto out;
-        }
-        if (*q) { /* ignore consecutive '/'s */
-            node = lookup_node(f, parent_ino, q);
-            if (!node) {
-                pthread_mutex_unlock(&f->lock);
-                goto out;
-            }
-            parent_ino = node->nodeid;
-        }
-        q = p;
-    }
-    ino = node->nodeid;
-    pthread_mutex_unlock(&f->lock);
 
 out:
     return ino;

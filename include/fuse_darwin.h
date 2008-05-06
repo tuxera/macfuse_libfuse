@@ -78,6 +78,7 @@ typedef fuse_sem_t sem_t;
 /* Versioning */
 
 const char *macfuse_version(void);
+long        fuse_os_version_major_np(void);
 
 /* Kernel */
 
@@ -89,8 +90,7 @@ const char *macfuse_version(void);
 
 #endif /* DARWIN_KERNEL_COMMON */
 
-int  fuse_purge_path_np(const char *path);
-long fuse_os_version_major(void);
+int  fuse_device_fd_np(const char *mountpoint);
 
 #endif /* _FUSE_DARWIN_H_ */
 
