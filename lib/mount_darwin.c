@@ -503,7 +503,7 @@ fuse_kern_unmount(const char *mountpoint, int fd)
 void
 fuse_unmount_compat22(const char *mountpoint)
 {
-    return fuse_kern_unmount(mountpoint, fuse_device_fd_np());
+    return fuse_kern_unmount(mountpoint, fuse_device_fd_np(mountpoint));
 }
 
 static int

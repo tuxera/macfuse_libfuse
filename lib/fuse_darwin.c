@@ -238,7 +238,6 @@ fuse_sem_wait(fuse_sem_t *sem)
     return res;
 }
 
-extern int fuse_device_fd_np(void);
 extern fuse_ino_t fuse_lookup_inode_by_path_np(const char *path);
 
 /* XXX: <sys/ubc.h> */
