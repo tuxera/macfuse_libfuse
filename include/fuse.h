@@ -236,10 +236,18 @@ struct fuse_operations {
 	int (*fsync) (const char *, int, struct fuse_file_info *);
 
 	/** Set extended attributes */
+#if (__FreeBSD__ >= 10)
+	int (*setxattr) (const char *, const char *, const char *, size_t, int, uint32_t);
+#else
 	int (*setxattr) (const char *, const char *, const char *, size_t, int);
+#endif /* __FreeBSD__ >= 10 */
 
 	/** Get extended attributes */
+#if (__FreeBSD__ >= 10)
+	int (*getxattr) (const char *, const char *, char *, size_t, uint32_t);
+#else
 	int (*getxattr) (const char *, const char *, char *, size_t);
+#endif /* __FreeBSD__ >= 10 */
 
 	/** List extended attributes */
 	int (*listxattr) (const char *, char *, size_t);
@@ -702,10 +710,17 @@ int fuse_fs_readlink(struct fuse_fs *fs, const char *path, char *buf,
 int fuse_fs_mknod(struct fuse_fs *fs, const char *path, mode_t mode,
 		  dev_t rdev);
 int fuse_fs_mkdir(struct fuse_fs *fs, const char *path, mode_t mode);
+#if (__FreeBSD__ >= 10)
+int fuse_fs_setxattr(struct fuse_fs *fs, const char *path, const char *name,
+		     const char *value, size_t size, int flags, uint32_t position);
+int fuse_fs_getxattr(struct fuse_fs *fs, const char *path, const char *name,
+		     char *value, size_t size, uint32_t position);
+#else
 int fuse_fs_setxattr(struct fuse_fs *fs, const char *path, const char *name,
 		     const char *value, size_t size, int flags);
 int fuse_fs_getxattr(struct fuse_fs *fs, const char *path, const char *name,
 		     char *value, size_t size);
+#endif /* __FreeBSD__ >= 10 */
 int fuse_fs_listxattr(struct fuse_fs *fs, const char *path, char *list,
 		      size_t size);
 int fuse_fs_removexattr(struct fuse_fs *fs, const char *path,

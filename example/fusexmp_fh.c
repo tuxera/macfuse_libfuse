@@ -542,7 +542,11 @@ static int xmp_fsync(const char *path, int isdatasync,
 #ifdef HAVE_SETXATTR
 /* xattr operations are optional and can safely be left unimplemented */
 static int xmp_setxattr(const char *path, const char *name, const char *value,
+#if (__FreeBSD__ >= 10)
+			size_t size, int flags, uint32_t position)
+#else
 			size_t size, int flags)
+#endif
 {
 #if (__FreeBSD__ >= 10)
 	int res;
@@ -553,9 +557,9 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 		char new_name[MAXPATHLEN];
 		memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
 		memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
-		res = setxattr(path, new_name, value, size, 0, flags);
+		res = setxattr(path, new_name, value, size, position, flags);
 	} else {
-		res = setxattr(path, name, value, size, 0, flags);
+		res = setxattr(path, name, value, size, position, flags);
 	}
 #else
 	int res = lsetxattr(path, name, value, size, flags);
@@ -566,7 +570,11 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 }
 
 static int xmp_getxattr(const char *path, const char *name, char *value,
+#if (__FreeBSD__ >= 10)
+			size_t size, uint32_t position)
+#else
 			size_t size)
+#endif
 {
 #if (__FreeBSD__ >= 10)
 	int res;
@@ -574,9 +582,9 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 		char new_name[MAXPATHLEN];
 		memcpy(new_name, A_KAUTH_FILESEC_XATTR, sizeof(A_KAUTH_FILESEC_XATTR));
 		memcpy(new_name, G_PREFIX, sizeof(G_PREFIX) - 1);
-		res = getxattr(path, new_name, value, size, 0, XATTR_NOFOLLOW);
+		res = getxattr(path, new_name, value, size, position, XATTR_NOFOLLOW);
 	} else {
-		res = getxattr(path, name, value, size, 0, XATTR_NOFOLLOW);
+		res = getxattr(path, name, value, size, position, XATTR_NOFOLLOW);
 	}
 #else
 	int res = lgetxattr(path, name, value, size);

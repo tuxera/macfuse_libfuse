@@ -345,7 +345,7 @@ volicon_fsync(const char *path, int isdatasync,
 
 static int
 volicon_setxattr(const char *path, const char *name, const char *value,
-                 size_t size, int flags)
+                 size_t size, int flags, uint32_t position)
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
@@ -357,16 +357,17 @@ volicon_setxattr(const char *path, const char *name, const char *value,
             ((struct FndrGenericInfo *)&finder_info)->flags |= ntohs(0x0400);
             //finder_info[8] |= 0x100;
             return fuse_fs_setxattr(volicon_get()->next, path, name,
-                                    finder_info, size, flags);
+                                    finder_info, size, flags, position);
         }
     }
 
     return fuse_fs_setxattr(volicon_get()->next, path, name, value, size,
-                            flags);
+                            flags, position);
 }
 
 static int
-volicon_getxattr(const char *path, const char *name, char *value, size_t size)
+volicon_getxattr(const char *path, const char *name, char *value, size_t size,
+                 uint32_t position)
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
@@ -383,7 +384,8 @@ volicon_getxattr(const char *path, const char *name, char *value, size_t size)
             return -ERANGE;
         }
 
-        res = fuse_fs_getxattr(volicon_get()->next, path, name, value, size);
+        res = fuse_fs_getxattr(volicon_get()->next, path, name, value, size,
+                               position);
 
         if (res != XATTR_FINDERINFO_SIZE) {
             memcpy(value, finder_info, XATTR_FINDERINFO_SIZE);
@@ -394,7 +396,8 @@ volicon_getxattr(const char *path, const char *name, char *value, size_t size)
         return XATTR_FINDERINFO_SIZE;
     }
 
-    res = fuse_fs_getxattr(volicon_get()->next, path, name, value, size);
+    res = fuse_fs_getxattr(volicon_get()->next, path, name, value, size,
+                           position);
 
     if (res == -ENOSYS) {
         res = -ENOTSUP;

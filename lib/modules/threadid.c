@@ -315,21 +315,23 @@ threadid_fsync(const char *path, int isdatasync,
 
 static int
 threadid_setxattr(const char *path, const char *name, const char *value,
-                 size_t size, int flags)
+                 size_t size, int flags, uint32_t position)
 {
     THREADID_PRE()
     int res = fuse_fs_setxattr(threadid_get()->next, path, name, value, size,
-                               flags);
+                               flags, position);
     THREADID_POST()
 
     return res;
 }
 
 static int
-threadid_getxattr(const char *path, const char *name, char *value, size_t size)
+threadid_getxattr(const char *path, const char *name, char *value, size_t size,
+                  uint32_t position)
 {
     THREADID_PRE()
-    int res = fuse_fs_getxattr(threadid_get()->next, path, name, value, size);
+    int res = fuse_fs_getxattr(threadid_get()->next, path, name, value, size,
+                               position);
     THREADID_POST()
 
     return res;

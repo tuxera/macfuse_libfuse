@@ -167,20 +167,6 @@ static int xmp_rename(const char *from, const char *to)
 	return 0;
 }
 
-#if (__FreeBSD__ >= 10)
-static int xmp_exchange(const char *path1, const char *path2,
-			unsigned long options)
-{
-	int res;
-
-	res = exchangedata(path1, path2, options);
-	if (res == -1)
-		return -errno;
-
-	return 0;
-}
-#endif /* __FreeBSD__ >= 10 */
-
 static int xmp_link(const char *from, const char *to)
 {
 	int res;
@@ -192,29 +178,11 @@ static int xmp_link(const char *from, const char *to)
 	return 0;
 }
 
-#if (__FreeBSD__ >= 10)
-static int xmp_chflags(const char *path, uint32_t flags)
-{
-        int res;
-
-        res = chflags(path, flags);
-
-        if (res == -1)
-                return -errno;
-
-        return 0;
-}
-#endif /* __FreeBSD__ >= 10 */
-
 static int xmp_chmod(const char *path, mode_t mode)
 {
 	int res;
 
-#if (__FreeBSD__ >= 10)
-	res = lchmod(path, mode);
-#else
 	res = chmod(path, mode);
-#endif
 	if (res == -1)
 		return -errno;
 
@@ -348,11 +316,7 @@ static int xmp_fsync(const char *path, int isdatasync,
 static int xmp_setxattr(const char *path, const char *name, const char *value,
 			size_t size, int flags)
 {
-#if (__FreeBSD__ >= 10)
-	int res = setxattr(path, name, value, size, 0, flags);
-#else
 	int res = lsetxattr(path, name, value, size, flags);
-#endif
 	if (res == -1)
 		return -errno;
 	return 0;
@@ -361,11 +325,7 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 static int xmp_getxattr(const char *path, const char *name, char *value,
 			size_t size)
 {
-#if (__FreeBSD__ >= 10)
-	int res = getxattr(path, name, value, size, 0, XATTR_NOFOLLOW);
-#else
 	int res = lgetxattr(path, name, value, size);
-#endif
 	if (res == -1)
 		return -errno;
 	return res;
@@ -373,11 +333,7 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
-#if (__FreeBSD__ >= 10)
-	int res = listxattr(path, list, size, XATTR_NOFOLLOW);
-#else
 	int res = llistxattr(path, list, size);
-#endif
 	if (res == -1)
 		return -errno;
 	return res;
@@ -385,11 +341,7 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 
 static int xmp_removexattr(const char *path, const char *name)
 {
-#if (__FreeBSD__ >= 10)
-	int res = removexattr(path, name, XATTR_NOFOLLOW);
-#else
 	int res = lremovexattr(path, name);
-#endif
 	if (res == -1)
 		return -errno;
 	return 0;
@@ -408,9 +360,6 @@ static struct fuse_operations xmp_oper = {
 	.rmdir		= xmp_rmdir,
 	.rename		= xmp_rename,
 	.link		= xmp_link,
-#if (__FreeBSD__ >= 10)
-        .chflags        = xmp_chflags,
-#endif /* __FreeBSD__ >= 10 */
 	.chmod		= xmp_chmod,
 	.chown		= xmp_chown,
 	.truncate	= xmp_truncate,
@@ -432,5 +381,10 @@ static struct fuse_operations xmp_oper = {
 int main(int argc, char *argv[])
 {
 	umask(0);
+#if (__FreeBSD__ >= 10)
+	fprintf(stderr, "Please use fusexmp_fh instead of fusexmp.\n");
+	return 1;
+#else
 	return fuse_main(argc, argv, &xmp_oper, NULL);
+#endif /* __FreeBSD__ >= 10 */
 }
