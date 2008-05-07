@@ -3593,7 +3593,7 @@ fuse_lookup_inode_internal_np(const char *mountpoint, const char *path)
 		p = strchr(p, '/');
 		if (p) {
 			*p = '\0'; /* Terminate string for use by q */
-			++p;	   /* One past the NULL (or former '/' */
+			++p;	   /* One past the NULL (or former '/') */
 		}
 		if (*q == '.' && *(q+1) == '\0') {
 			fuse_put_internal_np(f);
@@ -3650,7 +3650,7 @@ fuse_resize_node_internal_np(const char *mountpoint, const char *path,
 		p = strchr(p, '/');
 		if (p) {
 			*p = '\0'; /* Terminate string for use by q */
-			++p;	   /* One past the NULL (or former '/' */
+			++p;	   /* One past the NULL (or former '/') */
 		}
 		if (*q == '.' && *(q+1) == '\0') {
 			fuse_put_internal_np(f);
