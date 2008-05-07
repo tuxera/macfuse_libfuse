@@ -244,7 +244,7 @@ extern fuse_ino_t fuse_lookup_inode_by_path_np(const char *path);
 #define UBC_INVALIDATE 0x04
 
 int
-fuse_purge_path_np(const char *path)
+fuse_purge_np(const char *path)
 {
     return ENOTSUP;
 }
