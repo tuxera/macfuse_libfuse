@@ -3311,7 +3311,9 @@ EOF
 	  versuffix="$major.$age.$revision"
 	  # Darwin ld doesn't like 0 for these options...
 	  minor_current=`expr $current + 1`
-	  verstring="${wl}-compatibility_version ${wl}$minor_current ${wl}-current_version ${wl}$minor_current.$revision"
+	  #verstring="${wl}-compatibility_version ${wl}$minor_current ${wl}-current_version ${wl}$minor_current.$revision"
+	  number_adjusted=`expr $number_major + 8`
+	  verstring="${wl}-compatibility_version ${wl}10.0.0 ${wl}-current_version ${wl}$number_major_adjusted.$number_minor.$number_revision"
 	  ;;
 
 	freebsd-aout)
