@@ -3609,7 +3609,9 @@ fuse_lookup_inode_internal_np(const char *mountpoint, const char *path)
 		}
 		q = p;
 	}
-	ino = node->nodeid;
+	if (node) {
+		ino = node->nodeid;
+	}
 	fuse_put_internal_np(f);
 
 out:
@@ -3664,9 +3666,11 @@ fuse_resize_node_internal_np(const char *mountpoint, const char *path,
 		}
 		q = p;
 	}
-	node->size = newsize;
-	node->cache_valid = 0;
-	ret = 0;
+	if (node) {
+		node->size = newsize;
+		node->cache_valid = 0;
+		ret = 0;
+	}
 	fuse_put_internal_np(f);
 
 out:
