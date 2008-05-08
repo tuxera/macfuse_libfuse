@@ -31,6 +31,8 @@
 #include <sys/xattr.h>
 #endif
 
+#if !(__FreeBSD__ >= 10)
+
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
@@ -381,10 +383,16 @@ static struct fuse_operations xmp_oper = {
 int main(int argc, char *argv[])
 {
 	umask(0);
-#if (__FreeBSD__ >= 10)
-	fprintf(stderr, "Please use fusexmp_fh instead of fusexmp.\n");
-	return 1;
-#else
 	return fuse_main(argc, argv, &xmp_oper, NULL);
-#endif /* __FreeBSD__ >= 10 */
 }
+
+#else
+
+int
+main(void)
+{
+    fprintf(stderr, "Please use fusexmp_fh instead of this program.\n");
+    return 1;
+}
+
+#endif
