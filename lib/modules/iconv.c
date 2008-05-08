@@ -476,26 +476,42 @@ static int iconv_fsyncdir(const char *path, int isdatasync,
 }
 
 static int iconv_setxattr(const char *path, const char *name,
+#if (__FreeBSD__ >= 10)
+                          const char *value, size_t size, int flags, uint32_t position)
+#else
                           const char *value, size_t size, int flags)
+#endif
 {
     struct iconv *ic = iconv_get();
     char *newpath;
     int err = iconv_convpath(ic, path, &newpath, 0);
     if (!err) {
+#if (__FreeBSD__ >= 10)
+        err = fuse_fs_setxattr(ic->next, newpath, name, value, size, flags, position);
+#else
         err = fuse_fs_setxattr(ic->next, newpath, name, value, size, flags);
+#endif
         free(newpath);
     }
     return err;
 }
 
 static int iconv_getxattr(const char *path, const char *name, char *value,
+#if (__FreeBSD__ >= 10)
+                          size_t size, uint32_t position)
+#else
                           size_t size)
+#endif
 {
     struct iconv *ic = iconv_get();
     char *newpath;
     int err = iconv_convpath(ic, path, &newpath, 0);
     if (!err) {
+#if (__FreeBSD__ >= 10)
+        err = fuse_fs_getxattr(ic->next, newpath, name, value, size, position);
+#else
         err = fuse_fs_getxattr(ic->next, newpath, name, value, size);
+#endif
         free(newpath);
     }
     return err;

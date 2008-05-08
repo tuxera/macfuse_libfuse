@@ -1049,21 +1049,37 @@ int fuse_fs_mkdir(struct fuse_fs *fs, const char *path, mode_t mode)
 }
 
 int fuse_fs_setxattr(struct fuse_fs *fs, const char *path, const char *name,
+#if (__FreeBSD__ >= 10)
+                     const char *value, size_t size, int flags, uint32_t position)
+#else
                      const char *value, size_t size, int flags)
+#endif
 {
     fuse_get_context()->private_data = fs->user_data;
     if (fs->op.setxattr)
+#if (__FreeBSD__ >= 10)
+        return fs->op.setxattr(path, name, value, size, flags, position);
+#else
         return fs->op.setxattr(path, name, value, size, flags);
+#endif
     else
         return -ENOSYS;
 }
 
 int fuse_fs_getxattr(struct fuse_fs *fs, const char *path, const char *name,
+#if (__FreeBSD__ >= 10)
+                     char *value, size_t size, uint32_t position)
+#else
                      char *value, size_t size)
+#endif
 {
     fuse_get_context()->private_data = fs->user_data;
     if (fs->op.getxattr)
+#if (__FreeBSD__ >= 10)
+        return fs->op.getxattr(path, name, value, size, position);
+#else
         return fs->op.getxattr(path, name, value, size);
+#endif
     else
         return -ENOSYS;
 }
@@ -2307,7 +2323,11 @@ static void fuse_lib_statfs(fuse_req_t req, fuse_ino_t ino)
 }
 
 static void fuse_lib_setxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
+#if (__FreeBSD__ >= 10)
+                              const char *value, size_t size, int flags, uint32_t position)
+#else
                               const char *value, size_t size, int flags)
+#endif
 {
     struct fuse *f = req_fuse_prepare(req);
     char *path;
@@ -2319,7 +2339,11 @@ static void fuse_lib_setxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
     if (path != NULL) {
         struct fuse_intr_data d;
         fuse_prepare_interrupt(f, req, &d);
+#if (__FreeBSD__ >= 10)
+        err = fuse_fs_setxattr(f->fs, path, name, value, size, flags, position);
+#else
         err = fuse_fs_setxattr(f->fs, path, name, value, size, flags);
+#endif
         fuse_finish_interrupt(f, req, &d);
         free(path);
     }
@@ -2328,7 +2352,11 @@ static void fuse_lib_setxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
 }
 
 static int common_getxattr(struct fuse *f, fuse_req_t req, fuse_ino_t ino,
+#if (__FreeBSD__ >= 10)
+                           const char *name, char *value, size_t size, uint32_t position)
+#else
                            const char *name, char *value, size_t size)
+#endif
 {
     int err;
     char *path;
@@ -2339,7 +2367,11 @@ static int common_getxattr(struct fuse *f, fuse_req_t req, fuse_ino_t ino,
     if (path != NULL) {
         struct fuse_intr_data d;
         fuse_prepare_interrupt(f, req, &d);
+#if (__FreeBSD__ >= 10)
+        err = fuse_fs_getxattr(f->fs, path, name, value, size, position);
+#else
         err = fuse_fs_getxattr(f->fs, path, name, value, size);
+#endif
         fuse_finish_interrupt(f, req, &d);
         free(path);
     }
@@ -2348,7 +2380,11 @@ static int common_getxattr(struct fuse *f, fuse_req_t req, fuse_ino_t ino,
 }
 
 static void fuse_lib_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
+#if (__FreeBSD__ >= 10)
+                              size_t size, uint32_t position)
+#else
                               size_t size)
+#endif
 {
     struct fuse *f = req_fuse_prepare(req);
     int res;
@@ -2359,14 +2395,22 @@ static void fuse_lib_getxattr(fuse_req_t req, fuse_ino_t ino, const char *name,
             reply_err(req, -ENOMEM);
             return;
         }
+#if (__FreeBSD__ >= 10)
+        res = common_getxattr(f, req, ino, name, value, size, position);
+#else
         res = common_getxattr(f, req, ino, name, value, size);
+#endif
         if (res > 0)
             fuse_reply_buf(req, value, res);
         else
             reply_err(req, res);
         free(value);
     } else {
+#if (__FreeBSD__ >= 10)
+        res = common_getxattr(f, req, ino, name, NULL, 0, position);
+#else
         res = common_getxattr(f, req, ino, name, NULL, 0);
+#endif
         if (res >= 0)
             fuse_reply_xattr(req, res);
         else

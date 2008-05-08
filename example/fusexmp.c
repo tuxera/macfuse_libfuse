@@ -31,6 +31,7 @@
 #include <sys/xattr.h>
 #endif
 
+#if !(__FreeBSD__ >= 10)
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
     int res;
@@ -314,11 +315,13 @@ static int xmp_fsync(const char *path, int isdatasync,
 #ifdef HAVE_SETXATTR
 /* xattr operations are optional and can safely be left unimplemented */
 static int xmp_setxattr(const char *path, const char *name, const char *value,
+#if (__FreeBSD__ >= 10)
+                        size_t size, int flags, uint32_t position)
+{
+    int res = lsetxattr(path, name, value, size, flags, position);
+#else
                         size_t size, int flags)
 {
-#if (__FreeBSD__ >= 10)
-    int res = setxattr(path, name, value, size, 0, flags);
-#else
     int res = lsetxattr(path, name, value, size, flags);
 #endif
     if (res == -1)
@@ -327,11 +330,13 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 }
 
 static int xmp_getxattr(const char *path, const char *name, char *value,
+#if (__FreeBSD__ >= 10)
+                    size_t size, uint32_t position)
+{
+    int res = lgetxattr(path, name, value, size, position);
+#else
                     size_t size)
 {
-#if (__FreeBSD__ >= 10)
-    int res = getxattr(path, name, value, size, 0, XATTR_NOFOLLOW);
-#else
     int res = lgetxattr(path, name, value, size);
 #endif
     if (res == -1)
@@ -341,11 +346,7 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
-#if (__FreeBSD__ >= 10)
-    int res = listxattr(path, list, size, XATTR_NOFOLLOW);
-#else
     int res = llistxattr(path, list, size);
-#endif
     if (res == -1)
         return -errno;
     return res;
@@ -353,11 +354,7 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 
 static int xmp_removexattr(const char *path, const char *name)
 {
-#if (__FreeBSD__ >= 10)
-    int res = removexattr(path, name, XATTR_NOFOLLOW);
-#else
     int res = lremovexattr(path, name);
-#endif
     if (res == -1)
         return -errno;
     return 0;
@@ -399,3 +396,14 @@ int main(int argc, char *argv[])
     umask(0);
     return fuse_main(argc, argv, &xmp_oper, NULL);
 }
+
+#else
+
+int
+main(void)
+{
+    fprintf(stderr, "Please use fusexmp_fh instead of this program.\n");
+    return 1;
+}
+
+#endif

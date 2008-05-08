@@ -612,8 +612,13 @@ struct fuse_lowlevel_ops {
      * Valid replies:
      *   fuse_reply_err
      */
+#if (__FreeBSD__ >= 10)
+    void (*setxattr) (fuse_req_t req, fuse_ino_t ino, const char *name,
+                      const char *value, size_t size, int flags, uint32_t position);
+#else
     void (*setxattr) (fuse_req_t req, fuse_ino_t ino, const char *name,
                       const char *value, size_t size, int flags);
+#endif
 
     /**
      * Get an extended attribute
@@ -637,8 +642,13 @@ struct fuse_lowlevel_ops {
      * @param name of the extended attribute
      * @param size maximum size of the value to send
      */
+#if (__FreeBSD__ >= 10)
+    void (*getxattr) (fuse_req_t req, fuse_ino_t ino, const char *name,
+                      size_t size, uint32_t position);
+#else
     void (*getxattr) (fuse_req_t req, fuse_ino_t ino, const char *name,
                       size_t size);
+#endif
 
     /**
      * List extended attribute names

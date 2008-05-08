@@ -285,20 +285,22 @@ volicon_fsync(const char *path, int isdatasync,
 
 static int
 volicon_setxattr(const char *path, const char *name, const char *value,
-                 size_t size, int flags)
+                 size_t size, int flags, uint32_t position)
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
     return fuse_fs_setxattr(volicon_get()->next, path, name, value, size,
-                            flags);
+                            flags, position);
 }
 
 static int
-volicon_getxattr(const char *path, const char *name, char *value, size_t size)
+volicon_getxattr(const char *path, const char *name, char *value, size_t size,
+                 uint32_t position)
 {
     ERROR_IF_MAGIC_FILE(path, EPERM);
 
-    return fuse_fs_getxattr(volicon_get()->next, path, name, value, size);
+    return fuse_fs_getxattr(volicon_get()->next, path, name, value, size,
+                            position);
 }
 
 static int

@@ -775,7 +775,11 @@ static void do_setxattr(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
     char *value = name + strlen(name) + 1;
 
     if (req->f->op.setxattr)
+#if (__FreeBSD__ >= 10)
+        req->f->op.setxattr(req, nodeid, name, value, arg->size, arg->flags, arg->position);
+#else
         req->f->op.setxattr(req, nodeid, name, value, arg->size, arg->flags);
+#endif
     else
         fuse_reply_err(req, ENOSYS);
 }
@@ -785,7 +789,11 @@ static void do_getxattr(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
     struct fuse_getxattr_in *arg = (struct fuse_getxattr_in *) inarg;
 
     if (req->f->op.getxattr)
+#if (__FreeBSD__ >= 10)
+        req->f->op.getxattr(req, nodeid, PARAM(arg), arg->size, arg->position);
+#else
         req->f->op.getxattr(req, nodeid, PARAM(arg), arg->size);
+#endif
     else
         fuse_reply_err(req, ENOSYS);
 }

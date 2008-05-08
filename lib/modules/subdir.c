@@ -455,26 +455,42 @@ static int subdir_fsyncdir(const char *path, int isdatasync,
 }
 
 static int subdir_setxattr(const char *path, const char *name, const char *value,
+#if (__FreeBSD__ >= 10)
+                        size_t size, int flags, uint32_t position)
+#else
                         size_t size, int flags)
+#endif
 {
     struct subdir *d = subdir_get();
     char *newpath = subdir_addpath(d, path);
     int err = -ENOMEM;
     if (newpath) {
+#if (__FreeBSD__ >= 10)
+        err = fuse_fs_setxattr(d->next, newpath, name, value, size, flags, position);
+#else
         err = fuse_fs_setxattr(d->next, newpath, name, value, size, flags);
+#endif
         free(newpath);
     }
     return err;
 }
 
 static int subdir_getxattr(const char *path, const char *name, char *value,
+#if (__FreeBSD__ >= 10)
+                    size_t size, uint32_t position)
+#else
                     size_t size)
+#endif
 {
     struct subdir *d = subdir_get();
     char *newpath = subdir_addpath(d, path);
     int err = -ENOMEM;
     if (newpath) {
+#if (__FreeBSD__ >= 10)
+        err = fuse_fs_getxattr(d->next, newpath, name, value, size, position);
+#else
         err = fuse_fs_getxattr(d->next, newpath, name, value, size);
+#endif
         free(newpath);
     }
     return err;
