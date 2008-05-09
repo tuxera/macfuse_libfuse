@@ -72,6 +72,9 @@ struct fuse_fs {
 	struct fuse_module *m;
 	void *user_data;
 	int compat;
+#if (__FreeBSD__ >= 10)
+	struct fuse *fuse;
+#endif /* __FreeBSD__ >= 10 */
 };
 
 struct fusemod_so {
@@ -3336,6 +3339,9 @@ struct fuse_fs *fuse_fs_new(const struct fuse_operations *op, size_t op_size,
 	}
 
 	fs->user_data = user_data;
+#if (__FreeBSD__ >= 10)
+	fs->fuse = NULL;
+#endif /* __FreeBSD__ >= 10 */
 	if (op)
 		memcpy(&fs->op, op, op_size);
 	return fs;
@@ -3468,6 +3474,7 @@ struct fuse *fuse_new_common(struct fuse_chan *ch, struct fuse_args *args,
 	hash_id(f, root);
 
 #if (__FreeBSD__ >= 10)
+	f->fs->fuse = f;
         fuse_set_fuse_internal_np(fuse_chan_fd(ch), f);
 #endif /* __FreeBSD__ >= 10 */
 
@@ -3581,6 +3588,42 @@ void fuse_register_module(struct fuse_module *mod)
 }
 
 #if (__FreeBSD__ >= 10)
+
+struct find_mountpoint_arg {
+    struct fuse *fuse;
+    const char *mountpoint;
+};
+
+static int
+find_mountpoint_helper(const char *mountpoint, struct mount_info *mi,
+                       struct find_mountpoint_arg *arg)
+{
+    if (mi->fuse == arg->fuse) {
+        arg->mountpoint = mountpoint;
+        return 0;
+    }
+
+    return 1;
+}
+
+const char *
+fuse_mountpoint_for_fs_np(struct fuse_fs *fs)
+{
+    if (!fs) {
+        return (const char *)0;
+    }
+
+    struct find_mountpoint_arg arg;
+
+    arg.fuse = fs->fuse;
+    arg.mountpoint = NULL;
+
+    pthread_mutex_lock(&mount_lock);
+    hash_traverse(mount_hash, (int(*)())find_mountpoint_helper, &arg);
+    pthread_mutex_unlock(&mount_lock);
+    
+    return arg.mountpoint;
+}
 
 struct fuse *
 fuse_get_internal_np(const char *mountpoint)
