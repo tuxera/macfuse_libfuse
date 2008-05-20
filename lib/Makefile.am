@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 if DARWIN
-AM_CPPFLAGS_DARWIN = -D__FreeBSD__=10 -DDARWIN_KERNEL_COMMON=1
+AM_CPPFLAGS_DARWIN = -D__FreeBSD__=10
 else
 AM_CPPFLAGS_DARWIN =
 endif
@@ -46,15 +46,15 @@ libfuse_la_SOURCES = 		\
 	fuse_signals.c		\
 	helper.c		\
 	modules/subdir.c	\
-        $(extra_source)         \
+	$(extra_source)		\
 	$(iconv_source)		\
 	$(mount_source)
 
 if !DARWIN
-libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:1 \
+libfuse_la_LDFLAGS = @libfuse_libs@ -version-number 2:7:3 \
 	-Wl,--version-script,$(srcdir)/fuse_versionscript
 else
-libfuse_la_LDFLAGS = -version-number 2:7:1
+libfuse_la_LDFLAGS = -version-number 2:7:3
 endif
 
 libulockmgr_la_SOURCES = ulockmgr.c

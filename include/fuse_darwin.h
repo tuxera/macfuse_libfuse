@@ -8,6 +8,10 @@
 #ifndef _FUSE_DARWIN_H_
 #define _FUSE_DARWIN_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <errno.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -80,17 +84,18 @@ typedef fuse_sem_t sem_t;
 const char *macfuse_version(void);
 long        fuse_os_version_major_np(void);
 
-/* Kernel */
+/* Advanced */
 
-#ifdef DARWIN_KERNEL_COMMON
+struct fuse_fs;
 
-#include <fuse_param.h>
-#include <fuse_ioctl.h>
-#include <fuse_version.h>
+int fuse_device_fd_np(const char *mountpoint);
+const char *fuse_mountpoint_for_fs_np(struct fuse_fs *fs);
+int fuse_knote_np(const char *mountpoint, const char *path, uint32_t note);
+int fuse_purge_np(const char *mountpoint, const char *path, off_t *newsize);
 
-#endif /* DARWIN_KERNEL_COMMON */
-
-int  fuse_device_fd_np(const char *mountpoint);
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _FUSE_DARWIN_H_ */
 

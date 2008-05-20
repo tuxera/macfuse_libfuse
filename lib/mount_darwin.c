@@ -6,7 +6,7 @@
  *  FUSE: Filesystem in Userspace
  *  Copyright (C) 2005-2006 Csaba Henk <csaba.henk@creo.hu>
  *
- *  This program can be distributed under the terms of the GNU LGPL.
+ *  This program can be distributed under the terms of the GNU LGPLv2.
  *  See the file COPYING.LIB.
 */
 
@@ -35,11 +35,11 @@
 #include <sys/mount.h>
 #include <AssertMacros.h>
 
-#include "fuse_darwin.h"
+#include "fuse_darwin_private.h"
 
 static int quiet_mode = 0;
 
-char *
+static char *
 getproctitle(pid_t pid, char **title, int *len)
 {
     size_t size;
@@ -110,7 +110,7 @@ out:
 }
 
 long
-fuse_os_version_major_np(void) 
+fuse_os_version_major_np(void)
 {
     int ret = 0;
     long major = 0;
@@ -142,7 +142,7 @@ fuse_os_version_major_np(void)
     }            
                  
     return major;
-}               
+}
 
 static int
 loadkmod(void)
@@ -154,7 +154,7 @@ loadkmod(void)
 
     major = fuse_os_version_major_np();
 
-    if (major != 8) { /* not Mac OS X 10.4.x */
+    if (major != 8) { /* not Mac OS X 10.4 */
         return EINVAL;
     }
 
@@ -200,7 +200,7 @@ post_notification(char   *name,
     CFMutableDictionaryRef nf_udata  = NULL;
 
     CFNotificationCenterRef distributedCenter;
-    CFStringEncoding encoding = kCFStringEncodingASCII;
+    CFStringEncoding encoding = kCFStringEncodingUTF8;
 
     distributedCenter = CFNotificationCenterGetDistributedCenter();
 
@@ -226,10 +226,10 @@ post_notification(char   *name,
     for (i = 0; i < nf_num; i++) {
         CFStringRef a_key = CFStringCreateWithCString(kCFAllocatorDefault,
                                                       udata_keys[i],
-                                                      kCFStringEncodingASCII);
+                                                      kCFStringEncodingUTF8);
         CFStringRef a_value = CFStringCreateWithCString(kCFAllocatorDefault,
                                                         udata_values[i],
-                                                        kCFStringEncodingASCII);
+                                                        kCFStringEncodingUTF8);
         CFDictionarySetValue(nf_udata, a_key, a_value);
         CFRelease(a_key);
         CFRelease(a_value);
@@ -460,6 +460,13 @@ fuse_mount_opt_proc(void *data, const char *arg, int key,
     return 1;
 }
 
+static void
+mount_hash_purge_helper(char *key, void *data)
+{
+    free(key);
+    free(data);
+}
+
 void
 fuse_kern_unmount(const char *mountpoint, int fd)
 {
@@ -470,6 +477,18 @@ fuse_kern_unmount(const char *mountpoint, int fd)
     char *ep, *rp = NULL, *umount_cmd;
 
     unsigned int hs_complete = 0;
+
+    pthread_mutex_lock(&mount_lock);
+    if ((mount_count > 0) && mountpoint) {
+        struct mount_info* mi =
+            hash_search(mount_hash, (char *)mountpoint, NULL, NULL);
+        if (mi) {
+            hash_destroy(mount_hash, (char *)mountpoint,
+                         mount_hash_purge_helper);
+            --mount_count;
+        }
+    }
+    pthread_mutex_unlock(&mount_lock);
 
     ret = ioctl(fd, FUSEDEVIOCGETHANDSHAKECOMPLETE, &hs_complete);
     if (ret || !hs_complete) {
@@ -503,7 +522,13 @@ fuse_kern_unmount(const char *mountpoint, int fd)
 void
 fuse_unmount_compat22(const char *mountpoint)
 {
-    return fuse_kern_unmount(mountpoint, fuse_device_fd_np(mountpoint));
+    char resolved_path[PATH_MAX];
+    char *rp = realpath(mountpoint, resolved_path);
+    if (rp) {
+        (void)unmount(resolved_path, 0);
+    }
+
+    return;
 }
 
 static int
@@ -532,8 +557,8 @@ fuse_mount_core(const char *mountpoint, const char *opts)
                     (CFURLRef)0,
                     (CFURLRef)0,
                     (CFURLRef)0,
-                    CFSTR("Operating System Not Supported"),
-                    CFSTR("The installed MacFUSE version is not appropriate for the operating system. Please upgrade your MacFUSE installation to one that is compatible with the currently running operating system."),
+                    CFSTR("Operating System Too Old"),
+                    CFSTR("The installed MacFUSE version is too new for the operating system. Please downgrade your MacFUSE installation to one that is compatible with the currently running operating system."),
                     CFSTR("OK")
                 );
             }
@@ -692,10 +717,37 @@ fuse_kern_mount(const char *mountpoint, struct fuse_args *args)
     }
 
     if (mo.ishelp) {
-        return 0;
+        res = 0;
+        goto out; 
+    }
+
+    pthread_mutex_lock(&mount_lock);
+    if (hash_search(mount_hash, (char *)mountpoint, NULL, NULL) != NULL) {
+        fprintf(stderr, "MacFUSE: attempt to remount on active mount point: %s",
+                mountpoint);
+        goto out_unlock;
+    }
+    if (did_daemonize && mount_count > 0) {
+        fprintf(stderr, "MacFUSE: attempt to multi-mount after daemonized: %s",
+                mountpoint);
+        goto out_unlock;
+    }
+    struct mount_info *mi = calloc(1, sizeof(struct mount_info));
+    if (!mi) {
+        goto out_unlock;
     }
 
     res = fuse_mount_core(mountpoint, mo.kernel_opts);
+    if (res < 0) {
+        free(mi);
+    } else {
+        mi->fd = res;
+        hash_search(mount_hash, (char *)mountpoint, mi, NULL);
+        ++mount_count;
+    }
+
+out_unlock:
+    pthread_mutex_unlock(&mount_lock);
 
 out:
     free(mo.kernel_opts);

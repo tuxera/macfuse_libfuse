@@ -25,6 +25,7 @@
 #include <errno.h>
 
 #include <crt_externs.h>
+#include "fuse_darwin.h"
 
 #define VOLICON_DOTUDOT_MAGIC_PATH "/._."
 #define VOLICON_ICON_MAGIC_PATH    "/.VolumeIcon.icns"
@@ -162,6 +163,20 @@ volicon_symlink(const char *from, const char *path)
     return fuse_fs_symlink(volicon_get()->next, from, path);
 }
 
+static int volicon_setvolname(const char *volname)
+{
+    return fuse_fs_setvolname(volicon_get()->next, volname);
+}
+
+static int volicon_exchange(const char *path1, const char *path2,
+                            unsigned long options)
+{
+    ERROR_IF_MAGIC_FILE(path1, EACCES);
+    ERROR_IF_MAGIC_FILE(path2, EACCES);
+
+    return fuse_fs_exchange(volicon_get()->next, path1, path2, options);
+}
+
 static int volicon_rename(const char *from, const char *to)
 {
     ERROR_IF_MAGIC_FILE(from, EACCES);
@@ -177,6 +192,53 @@ volicon_link(const char *from, const char *to)
     ERROR_IF_MAGIC_FILE(to, EACCES);
 
     return fuse_fs_link(volicon_get()->next, from, to);
+}
+
+static int
+volicon_chflags(const char *path, uint32_t flags)
+{
+    ERROR_IF_MAGIC_FILE(path, EACCES);
+
+    return fuse_fs_chflags(volicon_get()->next, path, flags);
+}
+
+static int
+volicon_getxtimes(const char *path, struct timespec *bkuptime,
+                  struct timespec *crtime)
+{
+    if (volicon_is_a_magic_file(path)) {
+        bkuptime->tv_sec = 0;
+        bkuptime->tv_nsec = 0;
+        crtime->tv_sec = 0;
+        crtime->tv_nsec = 0;
+        return 0;
+    }
+
+    return fuse_fs_getxtimes(volicon_get()->next, path, bkuptime, crtime);
+}
+
+static int
+volicon_setbkuptime(const char *path, const struct timespec *bkuptime)
+{
+    ERROR_IF_MAGIC_FILE(path, EPERM);
+
+    return fuse_fs_setbkuptime(volicon_get()->next, path, bkuptime);
+}
+
+static int
+volicon_setchgtime(const char *path, const struct timespec *chgtime)
+{
+    ERROR_IF_MAGIC_FILE(path, EPERM);
+
+    return fuse_fs_setchgtime(volicon_get()->next, path, chgtime);
+}
+
+static int
+volicon_setcrtime(const char *path, const struct timespec *crtime)
+{
+    ERROR_IF_MAGIC_FILE(path, EPERM);
+
+    return fuse_fs_setcrtime(volicon_get()->next, path, crtime);
 }
 
 static int
@@ -530,6 +592,13 @@ static struct fuse_operations volicon_oper = {
     .lock        = volicon_lock,
     .utimens     = volicon_utimens,
     .bmap        = volicon_bmap,
+    .setvolname  = volicon_setvolname,
+    .exchange    = volicon_exchange,
+    .getxtimes   = volicon_getxtimes,
+    .setbkuptime = volicon_setbkuptime,
+    .setchgtime  = volicon_setchgtime,
+    .setcrtime   = volicon_setcrtime,
+    .chflags     = volicon_chflags,
 };
 
 static struct fuse_opt volicon_opts[] = {
@@ -586,18 +655,17 @@ volicon_new(struct fuse_args *args, struct fuse_fs *next[])
         return NULL;
     }
 
-    extern const char *fuse_get_mountpoint(void);
-    d->mntpath = fuse_get_mountpoint();
-    if (!d->mntpath) {
-        goto out_free;
-    }
-
     if (fuse_opt_parse(args, d, volicon_opts, volicon_opt_proc) == -1) {
         goto out_free;
     }
 
     if (!next[0] || next[1]) {
         fprintf(stderr, "volicon: exactly one next filesystem required\n");
+        goto out_free;
+    }
+
+    d->mntpath = fuse_mountpoint_for_fs_np(next[0]);
+    if (!d->mntpath) {
         goto out_free;
     }
 

@@ -1,3 +1,75 @@
+2008-02-19  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Released 2.7.3
+
+2008-02-13  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Add missing bdi_init() and bdi_destroy() calls for 2.6.24
+	kernel.  Lack of bdi_init() could cause write to hang.  Report
+	forwarded by Szakacsits Szabolcs from the NTFS-3G forum.
+
+2008-02-03  Csaba Henk <csaba.henk@creo.hu>
+
+	* lib/mount_bsd.c:
+	- string formatting fixes
+	- exit if mounting has failed
+	  (in FreeBSD a mount failure is not critical per se, as the daemon
+	  still could be mounted externally, but waiting for such an event
+	  is more confusing than fruitful)
+	- ditch the kvm(8) stuff and simply use forced unmount which just
+	  won't block
+	- prettify option specifications
+	- add "-onosync_unmount" kernel option
+
+2008-01-07  Csaba Henk <csaba.henk@creo.hu>
+
+	* lib/mount_bsd.c:
+	- refine device closing in a race-free way
+	- add support for "-osubtype" on FreeBSD
+
+	* makeconf.sh: make it work under FreeBSD
+
+2008-01-03  Csaba Henk <csaba.henk@creo.hu>
+
+	* lib/mount_bsd.c: close device before unmount
+	(cf. lib/mount.c rev. 1.43) and fix some warnings 
+
+2007-12-23  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix './configure --disable-static'.  Patch from Ismail Dönmez
+
+2007-12-17  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Released 2.7.2
+
+2007-12-12  Miklos Szeredi <miklos@szeredi.hu>
+
+	* Fix kernel module compile for 2.6.24
+
+	* Invalidate attributes of parent directory after create(), since
+	the modification time changes.  Invalidate attributes on rename,
+	since some filesystems may update st_ctime.  Reported by Szabolcs
+	Szakacsits
+
+	* Fix NFS exporting to handle 64bit node IDs
+
+	* Disable old symbol versions if __UCLIBC__ is defined.  If a
+	symbol in a library has multiple versions, the runtime linker in
+	uClibc seems to randomly choose between them.
+
+	* Remove erroneous 'fuse_opt_insert_arg@FUSE_2_5' from
+	fuse_version_script.  fuse_opt_free_args() was added in fuse-2.6.
+
+	* Close fuse device file descriptor before calling umount(),
+	preventing a deadlock when umount is synchronous.  Reported by
+	Szabolcs Szakacsits
+
+2007-11-12  Miklos Szeredi <miklos@szeredi.hu>
+
+	* 'fusermount -u' did not umount the filesystem if /etc/mtab was a
+	symlink.  This bug was introduced in 2.7.1 by "Don't call
+	/bin/[u]mount if /etc/mtab is a symlink".  Found by robertsong.
+
 2007-10-16  Miklos Szeredi <miklos@szeredi.hu>
 
 	* Released 2.7.1

@@ -1,4 +1,4 @@
-AC_INIT(fuse, 2.7.1)
+AC_INIT(fuse, 2.7.3)
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(include/config.h)
@@ -63,9 +63,7 @@ AC_CHECK_FUNCS([fork setxattr fdatasync])
 AC_CHECK_MEMBERS([struct stat.st_atim])
 AC_CHECK_MEMBERS([struct stat.st_atimespec])
 
-if test "$arch" != darwin; then
 libfuse_libs="-pthread"
-fi
 LIBS=
 AC_SEARCH_LIBS(dlopen, [dl])
 AC_SEARCH_LIBS(clock_gettime, [rt])
