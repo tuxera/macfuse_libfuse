@@ -333,6 +333,12 @@ static void fill_open(struct fuse_open_out *arg,
 		arg->open_flags |= FOPEN_DIRECT_IO;
 	if (f->keep_cache)
 		arg->open_flags |= FOPEN_KEEP_CACHE;
+#if (__FreeBSD__ >= 10)
+	if (f->purge_attr)
+		arg->open_flags |= FOPEN_PURGE_ATTR;
+	if (f->purge_ubc)
+		arg->open_flags |= FOPEN_PURGE_UBC;
+#endif
 }
 
 #if (__FreeBSD__ >= 10)

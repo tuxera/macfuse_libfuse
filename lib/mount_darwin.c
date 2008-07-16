@@ -184,6 +184,7 @@ out:
 
 enum {
     KEY_ALLOW_ROOT,
+    KEY_AUTO_CACHE,
     KEY_DIO,
     KEY_HELP,
     KEY_IGNORED,
@@ -205,6 +206,7 @@ static const struct fuse_opt fuse_mount_opts[] = {
     { "allow_other", offsetof(struct mount_opts, allow_other), 1 },
     { "allow_root", offsetof(struct mount_opts, allow_root), 1 },
     FUSE_OPT_KEY("allow_root",          KEY_ALLOW_ROOT),
+    FUSE_OPT_KEY("auto_cache",          KEY_AUTO_CACHE),
     FUSE_OPT_KEY("-r",                  KEY_RO),
     FUSE_OPT_KEY("-h",                  KEY_HELP),
     FUSE_OPT_KEY("--help",              KEY_HELP),
@@ -330,6 +332,12 @@ fuse_mount_opt_proc(void *data, const char *arg, int key,
     struct mount_opts *mo = data;
 
     switch (key) {
+
+    case KEY_AUTO_CACHE:
+        if (fuse_opt_add_opt(&mo->kernel_opts, "auto_cache") == -1 ||
+            fuse_opt_add_arg(outargs, "-oauto_cache") == -1)
+            return -1;
+        return 0;
 
     case KEY_ALLOW_ROOT:
         if (fuse_opt_add_opt(&mo->kernel_opts, "allow_other") == -1 ||
