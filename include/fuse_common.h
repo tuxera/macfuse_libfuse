@@ -65,8 +65,15 @@ struct fuse_file_info {
 	    operation.	Introduced in version 2.6 */
 	unsigned int flush : 1;
 
+#if (__FreeBSD__ >= 10)
+	/** Padding.  Do not use*/
+	unsigned int padding : 27;
+	unsigned int purge_attr: 1;
+	unsigned int purge_ubc: 1;
+#else
 	/** Padding.  Do not use*/
 	unsigned int padding : 29;
+#endif
 
 	/** File handle.  May be filled in by filesystem in open().
 	    Available in all other file operations */

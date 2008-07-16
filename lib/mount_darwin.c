@@ -255,6 +255,7 @@ out:
 }
 
 enum {
+    KEY_AUTO_CACHE,
     KEY_ALLOW_ROOT,
     KEY_DIO,
     KEY_HELP,
@@ -402,6 +403,12 @@ fuse_mount_opt_proc(void *data, const char *arg, int key,
     struct mount_opts *mo = data;
 
     switch (key) {
+
+    case KEY_AUTO_CACHE:
+        if (fuse_opt_add_opt(&mo->kernel_opts, "auto_cache") == -1 ||
+            fuse_opt_add_arg(outargs, "-outo_cache") == -1)
+            return -1;
+        return 0;
 
     case KEY_ALLOW_ROOT:
         if (fuse_opt_add_opt(&mo->kernel_opts, "allow_other") == -1 ||

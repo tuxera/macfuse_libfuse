@@ -2136,14 +2136,27 @@ static void open_auto_cache(struct fuse *f, fuse_ino_t ino, const char *path,
 			pthread_mutex_unlock(&f->lock);
 			err = fuse_fs_fgetattr(f->fs, path, &stbuf, fi);
 			pthread_mutex_lock(&f->lock);
+#if (__FreeBSD__ >= 10)
+			if (!err) {
+				if (stbuf.st_size != node->size)
+					fi->purge_attr = 1;
+				update_stat(node, &stbuf);
+			} else
+				node->cache_valid = 0;
+#else
 			if (!err)
 				update_stat(node, &stbuf);
 			else
 				node->cache_valid = 0;
+#endif
 		}
 	}
 	if (node->cache_valid)
 		fi->keep_cache = 1;
+#if (__FreeBSD__ >= 10)
+	else
+		fi->purge_ubc = 1;
+#endif
 
 	node->cache_valid = 1;
 	pthread_mutex_unlock(&f->lock);
