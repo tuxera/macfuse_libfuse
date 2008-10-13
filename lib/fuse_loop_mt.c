@@ -126,7 +126,15 @@ static void *fuse_do_work(void *data)
 	}
 
 	sem_post(&mt->finish);
+#if (__FreeBSD__ >= 10)
+	{
+		sigset_t set;
+		(void)sigprocmask(0, NULL, &set);
+		(void)sigsuspend(&set); /* want cancelable */
+	}
+#else
 	pause();
+#endif /* __FreeBSD__ >= 10 */
 
 	return NULL;
 }
