@@ -830,7 +830,9 @@ static struct fuse_operations xmp_oper = {
 	.destroy	= xmp_destroy,
 	.getattr	= xmp_getattr,
 	.fgetattr	= xmp_fgetattr,
+#if !(__FreeBSD__ >= 10)
 	.access		= xmp_access,
+#endif /* __FreeBSD__ */
 	.readlink	= xmp_readlink,
 	.opendir	= xmp_opendir,
 	.readdir	= xmp_readdir,
@@ -863,7 +865,7 @@ static struct fuse_operations xmp_oper = {
 #endif
 	.lock		= xmp_lock,
 #if (__FreeBSD__ >= 10)
-        .setvolname     = xmp_setvolname,
+	.setvolname	= xmp_setvolname,
 	.exchange	= xmp_exchange,
 	.getxtimes	= xmp_getxtimes,
 	.setbkuptime	= xmp_setbkuptime,
