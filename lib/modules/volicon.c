@@ -1,8 +1,8 @@
 /*
  *  Custom volume icon support for MacFUSE.
  *
- *  - libfuse stack module by Andrew de los Reyes <adlr@google>
- *  - Based on "volicon" code by Amit Singh <singh@>
+ *  - Made into a libfuse stack module by Andrew de los Reyes <adlr@google>
+ *  - Original "volicon" code by Amit Singh <singh@>
  *
  *  This program can be distributed under the terms of the GNU LGPL.
  *  See the file COPYING.LIB for details.
@@ -192,6 +192,23 @@ volicon_link(const char *from, const char *to)
     ERROR_IF_MAGIC_FILE(to, EACCES);
 
     return fuse_fs_link(volicon_get()->next, from, to);
+}
+
+static int
+volicon_setattr_x(const char *path, struct setattr_x *attr)
+{
+    ERROR_IF_MAGIC_FILE(path, EACCES);
+
+    return fuse_fs_setattr_x(volicon_get()->next, path, attr);
+}
+
+static int
+volicon_fsetattr_x(const char *path, struct setattr_x *attr,
+		   struct fuse_file_info *fi)
+{
+    ERROR_IF_MAGIC_FILE(path, EACCES);
+
+    return fuse_fs_fsetattr_x(volicon_get()->next, path, attr, fi);
 }
 
 static int
@@ -599,6 +616,8 @@ static struct fuse_operations volicon_oper = {
     .setchgtime  = volicon_setchgtime,
     .setcrtime   = volicon_setcrtime,
     .chflags     = volicon_chflags,
+    .setattr_x   = volicon_setattr_x,
+    .fsetattr_x  = volicon_fsetattr_x,
 };
 
 static struct fuse_opt volicon_opts[] = {

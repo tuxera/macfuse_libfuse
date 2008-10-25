@@ -753,6 +753,26 @@ static inline int fuse_compat_statfs(struct fuse_fs *fs, const char *path,
 	return fs->op.statfs(fs->compat == 25 ? "/" : path, buf);
 }
 
+int fuse_fs_setattr_x(struct fuse_fs *fs, const char *path,
+      		      struct setattr_x *attr)
+{
+	fuse_get_context()->private_data = fs->user_data;
+	if (fs->op.setattr_x)
+		return fs->op.setattr_x(path, attr);
+	else
+		return -ENOSYS;
+}
+
+int fuse_fs_fsetattr_x(struct fuse_fs *fs, const char *path,
+      		       struct setattr_x *attr, struct fuse_file_info *fi)
+{
+	fuse_get_context()->private_data = fs->user_data;
+	if (fs->op.fsetattr_x)
+		return fs->op.fsetattr_x(path, attr, fi);
+	else
+		return -ENOSYS;
+}
+
 #endif /* __FreeBSD__ */
 
 int fuse_fs_getattr(struct fuse_fs *fs, const char *path, struct stat *buf)
@@ -1549,6 +1569,95 @@ int fuse_fs_chflags(struct fuse_fs *fs, const char *path, uint32_t flags)
 		return fs->op.chflags(path, flags);
 	else
 		return -ENOSYS;
+}
+
+static void fuse_lib_setattr_x(fuse_req_t req, fuse_ino_t ino,
+			       struct setattr_x *attr,
+			       int valid, struct fuse_file_info *fi)
+{
+	struct fuse *f = req_fuse_prepare(req);
+	struct stat buf;
+	char *path;
+	int err;
+
+	err = -ENOENT;
+	pthread_rwlock_rdlock(&f->tree_lock);
+	path = get_path(f, ino);
+	if (path != NULL) {
+		struct fuse_intr_data d;
+		fuse_prepare_interrupt(f, req, &d);
+		err = 0;
+		if (!err && valid) {
+			if (fi)
+				err = fuse_fs_fsetattr_x(f->fs, path, attr, fi);
+			else
+				err = fuse_fs_setattr_x(f->fs, path, attr);
+			if (err == -ENOSYS)
+				err = 0;
+			else
+				goto done;
+		}
+		if (!err && (valid & FUSE_SET_ATTR_FLAGS)) {
+			err = fuse_fs_chflags(f->fs, path, attr->flags);
+			/* XXX: don't complain if flags couldn't be written */
+			if (err == -ENOSYS)
+				err = 0;
+		}
+		if (!err && (valid & FUSE_SET_ATTR_BKUPTIME)) {
+			err = fuse_fs_setbkuptime(f->fs, path, &attr->bkuptime);
+		}
+		if (!err && (valid & FUSE_SET_ATTR_CHGTIME)) {
+			err = fuse_fs_setchgtime(f->fs, path, &attr->chgtime);
+		}
+		if (!err && (valid & FUSE_SET_ATTR_CRTIME)) {
+			err = fuse_fs_setcrtime(f->fs, path, &attr->crtime);
+		}
+		if (!err && (valid & FUSE_SET_ATTR_MODE))
+			err = fuse_fs_chmod(f->fs, path, attr->mode);
+		if (!err && (valid & (FUSE_SET_ATTR_UID | FUSE_SET_ATTR_GID))) {
+			uid_t uid = (valid & FUSE_SET_ATTR_UID) ?
+				attr->uid : (uid_t) -1;
+			gid_t gid = (valid & FUSE_SET_ATTR_GID) ?
+				attr->gid : (gid_t) -1;
+			err = fuse_fs_chown(f->fs, path, uid, gid);
+		}
+		if (!err && (valid & FUSE_SET_ATTR_SIZE)) {
+			if (fi)
+				err = fuse_fs_ftruncate(f->fs, path,
+							attr->size, fi);
+			else
+				err = fuse_fs_truncate(f->fs, path, attr->size);
+		}
+		if (!err && (valid & FUSE_SET_ATTR_MTIME)) {
+			struct timespec tv[2];
+			if (valid & FUSE_SET_ATTR_ATIME) {
+				tv[0] = attr->acctime;
+			} else {
+				struct timeval now;
+				gettimeofday(&now, NULL);
+				tv[0].tv_sec = now.tv_sec;
+				tv[0].tv_nsec = now.tv_usec * 1000;
+			}
+			tv[1] = attr->modtime;
+			err = fuse_fs_utimens(f->fs, path, tv);
+		}
+done:
+		if (!err)
+			err = fuse_fs_getattr(f->fs,  path, &buf);
+		fuse_finish_interrupt(f, req, &d);
+		free(path);
+	}
+	pthread_rwlock_unlock(&f->tree_lock);
+	if (!err) {
+		if (f->conf.auto_cache) {
+			pthread_mutex_lock(&f->lock);
+			update_stat(get_node(f, ino), &buf);
+			pthread_mutex_unlock(&f->lock);
+		}
+		set_stat(f, ino, &buf);
+		fuse_reply_attr(req, &buf, f->conf.attr_timeout);
+	} else
+		reply_err(req, err);
 }
 
 #endif /* __FreeBSD__ >= 10 */
@@ -3104,6 +3213,7 @@ static struct fuse_lowlevel_ops fuse_path_ops = {
         .setvolname = fuse_lib_setvolname,
         .exchange = fuse_lib_exchange,
 	.getxtimes = fuse_lib_getxtimes,
+	.setattr_x = fuse_lib_setattr_x,
 #endif
 };
 

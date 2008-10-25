@@ -471,6 +471,11 @@ struct fuse_operations {
 
 	int (*chflags) (const char *, uint32_t);
 
+	int (*setattr_x) (const char *, struct setattr_x *);
+
+	int (*fsetattr_x) (const char *, struct setattr_x *,
+			   struct fuse_file_info *);
+
 #endif /* __FreeBSD__ >= 10 */
 };
 

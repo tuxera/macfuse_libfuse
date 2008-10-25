@@ -306,6 +306,31 @@ static int subdir_link(const char *from, const char *to)
 }
 
 #if (__FreeBSD__ >= 10)
+static int subdir_setattr_x(const char *path, struct setattr_x *attr)
+{
+	struct subdir *d = subdir_get();
+	char *newpath = subdir_addpath(d, path);
+	int err = -ENOMEM;
+	if (newpath) {
+		err = fuse_fs_setattr_x(d->next, newpath, attr);
+		free(newpath);
+	}
+	return err;
+}
+
+static int subdir_fsetattr_x(const char *path, struct setattr_x *attr,
+			     struct fuse_file_info *fi)
+{
+	struct subdir *d = subdir_get();
+	char *newpath = subdir_addpath(d, path);
+	int err = -ENOMEM;
+	if (newpath) {
+		err = fuse_fs_fsetattr_x(d->next, newpath, attr, fi);
+		free(newpath);
+	}
+	return err;
+}
+
 static int subdir_chflags(const char *path, uint32_t flags)
 {
 	struct subdir *d = subdir_get();
@@ -694,6 +719,8 @@ static struct fuse_operations subdir_oper = {
 	.setchgtime	= subdir_setchgtime,
 	.setcrtime	= subdir_setcrtime,
 	.chflags	= subdir_chflags,
+	.setattr_x	= subdir_setattr_x,
+	.fsetattr_x	= subdir_fsetattr_x,
 #endif /* __FreeBSD__ >= 10 */
 };
 

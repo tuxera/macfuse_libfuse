@@ -84,6 +84,30 @@ static void convert_stat(const struct stat *stbuf, struct fuse_attr *attr)
 
 }
 
+#if (__FreeBSD__ >= 10)
+
+static void convert_attr_x(const struct fuse_setattr_in *attr,
+			   struct setattr_x *stbuf)
+{
+	stbuf->mode		= attr->mode;
+	stbuf->uid		= attr->uid;
+	stbuf->gid		= attr->gid;
+	stbuf->size		= attr->size;
+	stbuf->acctime.tv_sec	= attr->atime;
+	stbuf->modtime.tv_sec	= attr->mtime;
+	stbuf->crtime.tv_sec	= attr->crtime;
+	stbuf->chgtime.tv_sec	= attr->chgtime;
+	stbuf->bkuptime.tv_sec	= attr->bkuptime;
+	stbuf->acctime.tv_nsec	= attr->atimensec;
+	stbuf->modtime.tv_nsec	= attr->mtimensec;
+	stbuf->crtime.tv_nsec	= attr->crtimensec;
+	stbuf->chgtime.tv_nsec	= attr->chgtimensec;
+	stbuf->bkuptime.tv_nsec	= attr->bkuptimensec;
+	stbuf->flags		= attr->flags;
+}
+
+#endif /* __FreeBSD__ >= 10 */
+
 static void convert_attr(const struct fuse_setattr_in *attr, struct stat *stbuf)
 {
 	stbuf->st_mode	       = attr->mode;
@@ -511,6 +535,24 @@ static void do_setattr(fuse_req_t req, fuse_ino_t nodeid, const void *inarg)
 {
 	struct fuse_setattr_in *arg = (struct fuse_setattr_in *) inarg;
 
+#if (__FreeBSD__ >= 10)
+	if (req->f->op.setattr_x) {
+		struct fuse_file_info *fi = NULL;
+		struct fuse_file_info fi_store;
+		struct setattr_x stbuf;
+		memset(&stbuf, 0, sizeof(stbuf));
+		convert_attr_x(arg, &stbuf);
+		if (arg->valid & FATTR_FH) {
+			arg->valid &= ~FATTR_FH;
+			memset(&fi_store, 0, sizeof(fi_store));
+			fi = &fi_store;
+			fi->fh = arg->fh;
+			fi->fh_old = fi->fh;
+		}
+		stbuf.valid = arg->valid;
+		req->f->op.setattr_x(req, nodeid, &stbuf, arg->valid, fi);
+	} else
+#endif /* __FreeBSD__ >= 10 */
 	if (req->f->op.setattr) {
 		struct fuse_file_info *fi = NULL;
 		struct fuse_file_info fi_store;
