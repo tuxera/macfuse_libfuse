@@ -160,6 +160,27 @@ threadid_link(const char *from, const char *to)
 }
 
 static int
+threadid_setattr_x(const char *path, struct setattr_x *attr)
+{
+    THREADID_PRE()
+    int res = fuse_fs_setattr_x(threadid_get()->next, path, attr);
+    THREADID_POST()
+
+    return res;
+}
+
+static int
+threadid_fsetattr_x(const char *path, struct setattr_x *attr,
+		    struct fuse_file_info *fi)
+{
+    THREADID_PRE()
+    int res = fuse_fs_fsetattr_x(threadid_get()->next, path, attr, fi);
+    THREADID_POST()
+
+    return res;
+}
+
+static int
 threadid_chflags(const char *path, uint32_t flags)
 {
     THREADID_PRE()
@@ -539,6 +560,8 @@ static struct fuse_operations threadid_oper = {
     .setchgtime  = threadid_setchgtime,
     .setcrtime   = threadid_setcrtime,
     .chflags     = threadid_chflags,
+    .setattr_x   = threadid_setattr_x,
+    .fsetattr_x  = threadid_fsetattr_x,
 };
 
 static struct fuse_opt threadid_opts[] = {

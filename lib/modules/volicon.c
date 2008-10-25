@@ -193,6 +193,23 @@ volicon_link(const char *from, const char *to)
 }
 
 static int
+volicon_setattr_x(const char *path, struct setattr_x *attr)
+{
+    ERROR_IF_MAGIC_FILE(path, EACCES);
+
+    return fuse_fs_setattr_x(volicon_get()->next, path, attr);
+}
+
+static int
+volicon_fsetattr_x(const char *path, struct setattr_x *attr,
+		   struct fuse_file_info *fi)
+{
+    ERROR_IF_MAGIC_FILE(path, EACCES);
+
+    return fuse_fs_fsetattr_x(volicon_get()->next, path, attr, fi);
+}
+
+static int
 volicon_chflags(const char *path, uint32_t flags)
 {
     ERROR_IF_MAGIC_FILE(path, EACCES);
@@ -664,6 +681,8 @@ static struct fuse_operations volicon_oper = {
     .setchgtime  = volicon_setchgtime,
     .setcrtime   = volicon_setcrtime,
     .chflags     = volicon_chflags,
+    .setattr_x   = volicon_setattr_x,
+    .fsetattr_x  = volicon_fsetattr_x,
 };
 
 static struct fuse_opt volicon_opts[] = {

@@ -336,6 +336,31 @@ static int iconv_link(const char *from, const char *to)
 }
 
 #if (__FreeBSD__ >= 10)
+static int iconv_setattr_x(const char *path, struct setattr_x *attr)
+{
+	struct iconv *ic = iconv_get();
+	char *newpath;
+	int err = iconv_convpath(ic, path, &newpath, 0);
+	if (!err) {
+		err = fuse_fs_setattr_x(ic->next, newpath, attr);
+		free(newpath);
+	}
+	return err;
+}
+
+static int iconv_fsetattr_x(const char *path, struct setattr_x *attr,
+			    struct fuse_file_info *fi)
+{
+	struct iconv *ic = iconv_get();
+	char *newpath;
+	int err = iconv_convpath(ic, path, &newpath, 0);
+	if (!err) {
+		err = fuse_fs_fsetattr_x(ic->next, newpath, attr, fi);
+		free(newpath);
+	}
+	return err;
+}
+
 static int iconv_chflags(const char *path, uint32_t flags)
 {
 	struct iconv *ic = iconv_get();
@@ -729,6 +754,8 @@ static struct fuse_operations iconv_oper = {
 	.setchgtime	= iconv_setchgtime,
 	.setcrtime	= iconv_setcrtime,
 	.chflags	= iconv_chflags,
+	.setattr_x	= iconv_setattr_x,
+	.fsetattr_x	= iconv_fsetattr_x,
 #endif
 };
 

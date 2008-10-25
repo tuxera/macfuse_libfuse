@@ -855,10 +855,12 @@ struct fuse_lowlevel_ops {
 			  fuse_ino_t newparent, const char *newname,
                           unsigned long options);
 
-        /* setxtimes is not needed because setattr also handles xtimes */
-
         void (*getxtimes) (fuse_req_t req, fuse_ino_t ino,
 			   struct fuse_file_info *);
+
+	void (*setattr_x) (fuse_req_t req, fuse_ino_t ino,
+			   struct setattr_x *attr, int to_set,
+			   struct fuse_file_info *fi);
 
 #endif /* __FreeBSD__ >= 10 */
 };

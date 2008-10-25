@@ -36,6 +36,39 @@
 extern "C" {
 #endif
 
+#if (__FreeBSD__ >= 10)
+
+#include <sys/stat.h>
+
+/* The following bits must be in lockstep with those in fuse_lowlevel.h */
+
+#define SETATTR_WANTS_MODE(attr)	((attr)->valid & (1 << 0))
+#define SETATTR_WANTS_UID(attr)		((attr)->valid & (1 << 1))
+#define SETATTR_WANTS_GID(attr)		((attr)->valid & (1 << 2))
+#define SETATTR_WANTS_SIZE(attr)	((attr)->valid & (1 << 3))
+#define SETATTR_WANTS_ACCTIME(attr)	((attr)->valid & (1 << 4))
+#define SETATTR_WANTS_MODTIME(attr)	((attr)->valid & (1 << 5))
+#define SETATTR_WANTS_CRTIME(attr)	((attr)->valid & (1 << 28))
+#define SETATTR_WANTS_CHGTIME(attr)	((attr)->valid & (1 << 29))
+#define SETATTR_WANTS_BKUPTIME(attr)	((attr)->valid & (1 << 30))
+#define SETATTR_WANTS_FLAGS(attr)	((attr)->valid & (1 << 31))
+
+struct setattr_x {
+	int32_t valid;
+	mode_t mode;
+	uid_t uid;
+	gid_t gid;
+	off_t size;
+	struct timespec acctime;
+	struct timespec modtime;
+	struct timespec crtime;
+	struct timespec chgtime;
+	struct timespec bkuptime;
+	uint32_t flags;
+};
+
+#endif /* __FreeBSD__ >= 10 */
+
 /**
  * Information about open files
  *
