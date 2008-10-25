@@ -1611,6 +1611,23 @@ static void fuse_lib_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 				err = fuse_fs_truncate(f->fs, path,
 						       attr->st_size);
 		}
+#if (__FreeBSD__ >= 10)
+		if (!err && (valid & FUSE_SET_ATTR_MTIME)) {
+			struct timespec tv[2];
+			if (valid & FUSE_SET_ATTR_ATIME) {
+				tv[0].tv_sec = attr->st_atime;
+				tv[0].tv_nsec = ST_ATIM_NSEC(attr);
+			} else {
+				struct timeval now;
+				gettimeofday(&now, NULL);
+				tv[0].tv_sec = now.tv_sec;
+				tv[0].tv_nsec = now.tv_usec * 1000;
+			}
+			tv[1].tv_sec = attr->st_mtime;
+			tv[1].tv_nsec = ST_MTIM_NSEC(attr);
+			err = fuse_fs_utimens(f->fs, path, tv);
+		}
+#else
 		if (!err &&
 		    (valid & (FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME)) ==
 		    (FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME)) {
@@ -1621,6 +1638,7 @@ static void fuse_lib_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
 			tv[1].tv_nsec = ST_MTIM_NSEC(attr);
 			err = fuse_fs_utimens(f->fs, path, tv);
 		}
+#endif /* __FreeBSD__ >= 10 */
 		if (!err)
 			err = fuse_fs_getattr(f->fs,  path, &buf);
 		fuse_finish_interrupt(f, req, &d);
