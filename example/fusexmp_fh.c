@@ -832,7 +832,7 @@ static struct fuse_operations xmp_oper = {
 	.fgetattr	= xmp_fgetattr,
 #if !(__FreeBSD__ >= 10)
 	.access		= xmp_access,
-#endif /* __FreeBSD__ */
+#endif /* !__FreeBSD__ >= 10 */
 	.readlink	= xmp_readlink,
 	.opendir	= xmp_opendir,
 	.readdir	= xmp_readdir,
