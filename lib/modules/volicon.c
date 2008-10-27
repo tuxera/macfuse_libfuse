@@ -480,7 +480,7 @@ volicon_listxattr(const char *path, char *list, size_t size)
     }
 
     if (res == -ENOSYS) {
-        res = 0;
+        res = -ENOTSUP;
     }
 
     return res;
