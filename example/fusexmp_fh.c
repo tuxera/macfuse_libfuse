@@ -420,13 +420,13 @@ static int xmp_getxtimes(const char *path, struct timespec *bkuptime,
 	attributes.forkattr    = 0;
 	attributes.volattr     = 0;
 
-#pragma pack(push)
-#pragma pack(1)
+
+
 	struct xtimeattrbuf {
 		uint32_t size;
 		struct timespec xtime;
-	};
-#pragma pack(pop)
+	} __attribute__ ((packed));
+
 
 	struct xtimeattrbuf buf;
 
