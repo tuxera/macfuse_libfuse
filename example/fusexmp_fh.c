@@ -17,7 +17,9 @@
 #define _GNU_SOURCE
 
 #include <fuse.h>
+#if !(__FreeBSD__ >= 10)
 #include <ulockmgr.h>
+#endif /* __FreeBSD__ >= 10 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -804,6 +806,7 @@ static int xmp_removexattr(const char *path, const char *name)
 }
 #endif /* HAVE_SETXATTR */
 
+#if !(__FreeBSD__ >= 10)
 static int xmp_lock(const char *path, struct fuse_file_info *fi, int cmd,
 		    struct flock *lock)
 {
@@ -812,6 +815,7 @@ static int xmp_lock(const char *path, struct fuse_file_info *fi, int cmd,
 	return ulockmgr_op(fi->fh, cmd, lock, &fi->lock_owner,
 			   sizeof(fi->lock_owner));
 }
+#endif /* __FreeBSD__ >= 10 */
 
 void *
 xmp_init(struct fuse_conn_info *conn)
@@ -866,7 +870,9 @@ static struct fuse_operations xmp_oper = {
 	.listxattr	= xmp_listxattr,
 	.removexattr	= xmp_removexattr,
 #endif
+#if !(__FreeBSD__ >= 10)
 	.lock		= xmp_lock,
+#endif /* __FreeBSD__ >= 10 */
 #if (__FreeBSD__ >= 10)
 	.setvolname	= xmp_setvolname,
 	.exchange	= xmp_exchange,
