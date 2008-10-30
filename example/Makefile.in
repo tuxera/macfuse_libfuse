@@ -52,7 +52,8 @@ fusexmp_LDADD = $(LDADD)
 fusexmp_DEPENDENCIES = ../lib/libfuse.la
 fusexmp_fh_SOURCES = fusexmp_fh.c
 fusexmp_fh_OBJECTS = fusexmp_fh.$(OBJEXT)
-fusexmp_fh_DEPENDENCIES = ../lib/libfuse.la ../lib/libulockmgr.la
+@DARWIN_FALSE@fusexmp_fh_DEPENDENCIES = ../lib/libfuse.la ../lib/libulockmgr.la
+@DARWIN_TRUE@fusexmp_fh_DEPENDENCIES = ../lib/libfuse.la
 hello_SOURCES = hello.c
 hello_OBJECTS = hello.$(OBJEXT)
 hello_LDADD = $(LDADD)
@@ -201,7 +202,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -I$(top_srcdir)/include -D_FILE_OFFSET_BITS=64 -D_REENTRANT
 LDADD = ../lib/libfuse.la @libfuse_libs@
-fusexmp_fh_LDADD = ../lib/libfuse.la ../lib/libulockmgr.la @libfuse_libs@
+@DARWIN_FALSE@fusexmp_fh_LDADD = ../lib/libfuse.la ../lib/libulockmgr.la @libfuse_libs@
+@DARWIN_TRUE@fusexmp_fh_LDADD = ../lib/libfuse.la @libfuse_libs@
 all: all-am
 
 .SUFFIXES:
