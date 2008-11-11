@@ -541,6 +541,46 @@ fuse_mount_core(const char *mountpoint, const char *opts)
         fprintf(stderr, "the MacFUSE file system is not available (%d)\n",
                 result);
         return -1;
+    } else {
+
+        /* Module loaded, but now need to check for user<->kernel match. */
+
+        char   version[MAXHOSTNAMELEN + 1] = { 0 };
+        size_t version_len = MAXHOSTNAMELEN;
+        size_t version_len_desired = 0;
+
+        result = sysctlbyname(SYSCTL_MACFUSE_VERSION_NUMBER, version,
+                              &version_len, NULL, (size_t)0);
+        if (result == 0) {
+            /* sysctlbyname() includes the trailing '\0' in version_len */
+            version_len_desired = strlen(MACFUSE_VERSION) + 1;
+
+            if ((version_len != version_len_desired) ||
+                strncmp(MACFUSE_VERSION, version, version_len)) {
+                result = -1;
+            }
+        }
+    }
+
+    if (result) {
+        if (!quiet_mode) {
+            CFUserNotificationDisplayNotice(
+                (CFTimeInterval)0,
+                kCFUserNotificationCautionAlertLevel,
+                (CFURLRef)0,
+                (CFURLRef)0,
+                (CFURLRef)0,
+                CFSTR("MacFUSE Runtime Version Mismatch"),
+                CFSTR("The MacFUSE library version this program is using is incompatible with the loaded MacFUSE kernel extension."),
+                CFSTR("OK")
+            );
+        }
+        post_notification(LIBFUSE_UNOTIFICATIONS_NOTIFY_RUNTIMEVERSIONMISMATCH,
+                          NULL, NULL, 0);
+        fprintf(stderr,
+                "this MacFUSE library version is incompatible with "
+                "the MacFUSE kernel extension\n");
+        return -1;
     }
 
     fdnam = getenv("FUSE_DEV_FD");
