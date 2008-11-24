@@ -277,6 +277,13 @@ static struct fuse *fuse_setup_common(int argc, char *argv[],
 	if (res == -1)
 		return NULL;
 
+#if (__FreeBSD__ >= 10)
+        if (!*mountpoint) {
+                fprintf(stderr, "no mount point\n");
+                return NULL;
+        }
+#endif /* __FreeBSD__ >= 10 */
+
 	ch = fuse_mount_common(*mountpoint, &args);
 	if (!ch) {
 		fuse_opt_free_args(&args);
